@@ -22,10 +22,8 @@ body.admin-body {
   padding: 0;
   font-family: 'Patrick Hand', 'Balsamiq Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   background-color: var(--admin-bg);
-  background-image: 
-    radial-gradient(#D5CBB9 1.2px, transparent 1.2px),
-    repeating-linear-gradient(0deg, transparent, transparent 31px, rgba(43, 45, 66, 0.05) 31px, rgba(43, 45, 66, 0.05) 32px);
-  background-size: 24px 24px, 100% 32px;
+  background-image: radial-gradient(#D5CBB9 1.4px, transparent 1.4px);
+  background-size: 24px 24px;
   color: var(--admin-dark);
   min-height: 100vh;
 }
@@ -68,7 +66,7 @@ body.admin-body {
   align-items: center;
   justify-content: center;
   box-shadow: var(--admin-shadow-sm);
-  transform: rotate(-3deg);
+  transform: none;
 }
 
 .admin-title {
@@ -173,7 +171,7 @@ body.admin-body {
   height: 16px;
   background: rgba(255, 224, 102, 0.7);
   border: 1px dashed rgba(43, 45, 66, 0.4);
-  transform: rotate(4deg);
+  transform: none;
 }
 
 .stat-icon {
@@ -270,7 +268,7 @@ body.admin-body {
   position: absolute;
   top: -12px;
   left: 50%;
-  transform: translateX(-50%) rotate(-1deg);
+  transform: translateX(-50%);
   width: 90px;
   height: 22px;
   background: rgba(255, 235, 153, 0.85);

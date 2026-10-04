@@ -9,6 +9,12 @@ class AudioEngine {
   constructor() {
     this.ctx = null;
     this.isMuted = false;
+    this.bgmEnabled = false;
+    this.bgmVolume = 0.3;
+    this.sfxVolume = 0.8;
+    this.speechEnabled = true;
+    this._bgmTimer = null;
+    this._bgmNoteIndex = 0;
     this.phonicsInterval = null;
     this.currentChantingLetter = null;
     this.currentPlayingAudio = null;
@@ -45,12 +51,29 @@ class AudioEngine {
     }
   }
 
+  mute() {
+    this.isMuted = true;
+    if (this._bgmTimer) {
+      clearTimeout(this._bgmTimer);
+      this._bgmTimer = null;
+    }
+    this.stopPhonicsChant();
+    this.stopCurrentPlayingAudio();
+    if (this.speechSynth) this.speechSynth.cancel();
+  }
+
+  unmute() {
+    this.isMuted = false;
+    if (this.bgmEnabled) {
+      this.startBgm();
+    }
+  }
+
   toggleMute() {
-    this.isMuted = !this.isMuted;
     if (this.isMuted) {
-      this.stopPhonicsChant();
-      this.stopCurrentPlayingAudio();
-      if (this.speechSynth) this.speechSynth.cancel();
+      this.unmute();
+    } else {
+      this.mute();
     }
     return this.isMuted;
   }
@@ -890,6 +913,83 @@ class AudioEngine {
       utter.onerror = onEnd;
     }
     this.speechSynth.speak(utter);
+  }
+
+  // --- Procedural Pentatonic Music Box BGM ---
+  startBgm() {
+    this.bgmEnabled = true;
+    if (this.isMuted || this._bgmTimer) return;
+    this.ensureContext();
+
+    // Gentle soothing pentatonic melody (frequencies in Hz)
+    const melody = [
+      523.25, 659.25, 783.99, 1046.50, // C5, E5, G5, C6
+      880.00, 783.99, 659.25, 523.25,  // A5, G5, E5, C5
+      587.33, 659.25, 783.99, 880.00,  // D5, E5, G5, A5
+      783.99, 659.25, 587.33, 523.25   // G5, E5, D5, C5
+    ];
+
+    this._bgmNoteIndex = 0;
+    const playNextNote = () => {
+      if (!this.bgmEnabled || this.isMuted || !this.ctx) return;
+
+      const freq = melody[this._bgmNoteIndex % melody.length];
+      this._bgmNoteIndex++;
+
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now);
+
+      // Warm marimba/kalimba harmonic overtone
+      const osc2 = this.ctx.createOscillator();
+      const gain2 = this.ctx.createGain();
+      osc2.type = 'triangle';
+      osc2.frequency.setValueAtTime(freq * 2, now);
+
+      const vol = (this.bgmVolume || 0.25) * 0.08;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(vol, now + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.65);
+
+      gain2.gain.setValueAtTime(0, now);
+      gain2.gain.linearRampToValueAtTime(vol * 0.35, now + 0.02);
+      gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc2.connect(gain2);
+      gain2.connect(this.ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.7);
+      osc2.start(now);
+      osc2.stop(now + 0.5);
+
+      this._bgmTimer = setTimeout(playNextNote, 420);
+    };
+
+    playNextNote();
+  }
+
+  stopBgm() {
+    this.bgmEnabled = false;
+    if (this._bgmTimer) {
+      clearTimeout(this._bgmTimer);
+      this._bgmTimer = null;
+    }
+  }
+
+  toggleBgm() {
+    if (this.bgmEnabled) {
+      this.stopBgm();
+      return false;
+    } else {
+      this.startBgm();
+      return true;
+    }
   }
 }
 

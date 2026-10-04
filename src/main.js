@@ -54,6 +54,7 @@ class MonsterPhonicsApp {
     this.btnCloseSettings = document.getElementById('btn-close-settings');
     this.btnSaveSettings = document.getElementById('btn-save-settings');
     this.settingSfxToggle = document.getElementById('setting-sfx-toggle');
+    this.settingBgmToggle = document.getElementById('setting-bgm-toggle');
     this.settingSpeechToggle = document.getElementById('setting-speech-toggle');
     this.btnResetProgress = document.getElementById('btn-reset-progress');
 
@@ -173,6 +174,17 @@ class MonsterPhonicsApp {
           audioEngine.unmute();
         } else {
           audioEngine.mute();
+        }
+      });
+    }
+
+    if (this.settingBgmToggle) {
+      this.settingBgmToggle.checked = audioEngine.bgmEnabled;
+      this.settingBgmToggle.addEventListener('change', (e) => {
+        if (e.target.checked) {
+          audioEngine.startBgm();
+        } else {
+          audioEngine.stopBgm();
         }
       });
     }
