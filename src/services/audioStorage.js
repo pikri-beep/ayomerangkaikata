@@ -9,6 +9,8 @@ const STORE_WORDS = 'custom_words';
 class AudioStorage {
   constructor() {
     this.db = null;
+    this._cachedKeys = new Set();
+    this._cacheInitialized = false;
     this.dbReadyPromise = this.initDB();
   }
 
@@ -33,6 +35,7 @@ class AudioStorage {
 
       request.onsuccess = (event) => {
         this.db = event.target.result;
+        this._refreshKeyCache().catch(() => {});
         resolve(this.db);
       };
 
@@ -41,6 +44,21 @@ class AudioStorage {
         reject(event.target.error);
       };
     });
+  }
+
+  async _refreshKeyCache() {
+    if (!this.db) return;
+    try {
+      const keys = await new Promise((resolve) => {
+        const tx = this.db.transaction(STORE_AUDIO, 'readonly');
+        const store = tx.objectStore(STORE_AUDIO);
+        const req = store.getAllKeys();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => resolve([]);
+      });
+      this._cachedKeys = new Set(keys);
+      this._cacheInitialized = true;
+    } catch (_) {}
   }
 
   async getDB() {
@@ -75,7 +93,10 @@ class AudioStorage {
       };
 
       const req = store.put(record);
-      req.onsuccess = () => resolve(true);
+      req.onsuccess = () => {
+        this._cachedKeys.add(key);
+        resolve(true);
+      };
       req.onerror = () => reject(req.error);
     });
   }
@@ -107,12 +128,25 @@ class AudioStorage {
   }
 
   /**
-   * Check if custom audio exists for a key
+   * Check synchronously if custom audio key exists
+   * @param {string} key
+   * @returns {boolean}
+   */
+  hasAudioSync(key) {
+    return this._cachedKeys.has(key);
+  }
+
+  /**
+   * Check if custom audio exists for a key (fast memory check)
    * @param {string} key
    * @returns {Promise<boolean>}
    */
   async hasAudio(key) {
+    if (this._cacheInitialized) {
+      return this._cachedKeys.has(key);
+    }
     const blob = await this.getAudio(key);
+    if (blob) this._cachedKeys.add(key);
     return !!blob;
   }
 
@@ -128,7 +162,10 @@ class AudioStorage {
       const tx = db.transaction(STORE_AUDIO, 'readwrite');
       const store = tx.objectStore(STORE_AUDIO);
       const req = store.delete(key);
-      req.onsuccess = () => resolve(true);
+      req.onsuccess = () => {
+        this._cachedKeys.delete(key);
+        resolve(true);
+      };
       req.onerror = () => reject(req.error);
     });
   }

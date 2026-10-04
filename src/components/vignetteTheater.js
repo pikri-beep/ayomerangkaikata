@@ -492,68 +492,81 @@ export class VignetteTheater {
       if (this.waxGhostEl) this.waxGhostEl.classList.add('visible');
       if (this.promptBoxEl) this.promptBoxEl.style.opacity = '0.35';
 
+      // Cache diorama rects once on pickup to eliminate layout reflow during drag
+      const vRect = this.viewportEl ? this.viewportEl.getBoundingClientRect() : null;
+      let cachedCanvasLeft = this.canvasEl ? this.canvasEl.getBoundingClientRect().left : 0;
+      let cachedCanvasTop = this.canvasEl ? this.canvasEl.getBoundingClientRect().top : 0;
+
       // Highlight target strip prominently
       if (this.targetStripEl) {
         this.targetStripEl.classList.add('strip-magnet-active');
       }
 
-      window.addEventListener('pointermove', onPointerMove, { passive: false });
-      window.addEventListener('pointerup', onPointerUp);
-      window.addEventListener('pointercancel', onPointerCancel);
-    };
+      let rafId = null;
+      let curX = e.clientX;
+      let curY = e.clientY;
 
-    const onPointerMove = (e) => {
-      if (!isPeeling || !ghostEl) return;
-      if (e.pointerId !== pointerId) return;
-      e.preventDefault();
+      const onPointerMove = (e) => {
+        if (!isPeeling || !ghostEl) return;
+        if (e.pointerId !== pointerId) return;
+        e.preventDefault();
 
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      moveDistance = Math.hypot(dx, dy);
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        moveDistance = Math.hypot(dx, dy);
+        curX = e.clientX;
+        curY = e.clientY;
 
-      this.updateGhostPosition(ghostEl, e.clientX, e.clientY);
+        if (!rafId) {
+          rafId = requestAnimationFrame(() => {
+            rafId = null;
+            if (ghostEl && isPeeling) {
+              this.updateGhostPosition(ghostEl, curX, curY);
+            }
+          });
+        }
 
-      // Check auto-scroll diorama viewport when near horizontal edges
-      if (this.viewportEl) {
-        const vRect = this.viewportEl.getBoundingClientRect();
-        if (e.clientY >= vRect.top && e.clientY <= vRect.bottom) {
-          const edgeThreshold = 60;
-          if (e.clientX < vRect.left + edgeThreshold) {
-            this.startAutoScroll(-14);
-          } else if (e.clientX > vRect.right - edgeThreshold) {
-            this.startAutoScroll(14);
+        // Check auto-scroll diorama viewport when near horizontal edges
+        if (vRect) {
+          if (e.clientY >= vRect.top && e.clientY <= vRect.bottom) {
+            const edgeThreshold = 60;
+            if (e.clientX < vRect.left + edgeThreshold) {
+              this.startAutoScroll(-14);
+            } else if (e.clientX > vRect.right - edgeThreshold) {
+              this.startAutoScroll(14);
+            } else {
+              this.stopAutoScroll();
+            }
           } else {
             this.stopAutoScroll();
           }
-        } else {
-          this.stopAutoScroll();
         }
-      }
 
-      // Check magnetic hover over target strip
-      if (this.targetStripEl && this.canvasEl && this.viewportEl) {
-        const canvasRect = this.canvasEl.getBoundingClientRect();
-        const curCanvasX = e.clientX - canvasRect.left;
-        const curCanvasY = e.clientY - canvasRect.top;
-        const distToTarget = Math.hypot(curCanvasX - this.targetSlot.x, curCanvasY - this.targetSlot.y);
+        // Check magnetic hover over target strip
+        if (this.targetStripEl && this.canvasEl) {
+          // Track canvas position with scroll
+          const curCanvasX = e.clientX - (vRect ? vRect.left - this.viewportEl.scrollLeft : cachedCanvasLeft);
+          const curCanvasY = e.clientY - (vRect ? vRect.top : cachedCanvasTop);
+          const distToTarget = Math.hypot(curCanvasX - this.targetSlot.x, curCanvasY - this.targetSlot.y);
 
-        if (distToTarget < 90) {
-          this.targetStripEl.classList.add('slot-hover-snap');
-        } else {
-          this.targetStripEl.classList.remove('slot-hover-snap');
+          if (distToTarget < 90) {
+            this.targetStripEl.classList.add('slot-hover-snap');
+          } else {
+            this.targetStripEl.classList.remove('slot-hover-snap');
+          }
         }
-      }
-    };
+      };
 
-    const onPointerUp = (e) => {
-      if (!isPeeling) return;
-      if (e.pointerId !== pointerId) return;
-      isPeeling = false;
-      this.stopAutoScroll();
+      const onPointerUp = (e) => {
+        if (!isPeeling) return;
+        if (e.pointerId !== pointerId) return;
+        isPeeling = false;
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+        this.stopAutoScroll();
 
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      window.removeEventListener('pointercancel', onPointerCancel);
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', onPointerUp);
+        window.removeEventListener('pointercancel', onPointerCancel);
 
       if (!ghostEl) return;
 
@@ -581,8 +594,13 @@ export class VignetteTheater {
       if (this.targetStripEl) this.targetStripEl.classList.remove('strip-magnet-active', 'slot-hover-snap');
     };
 
-    sticker.addEventListener('pointerdown', onPointerDown);
-  }
+    window.addEventListener('pointermove', onPointerMove, { passive: false });
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerCancel);
+  };
+
+  sticker.addEventListener('pointerdown', onPointerDown);
+}
 
   /** Called when child presses Enter/Space on sticker — auto-snap without drag */
   autoSnapToSlot(wordData) {
@@ -612,9 +630,10 @@ export class VignetteTheater {
 
   updateGhostPosition(ghostEl, clientX, clientY) {
     if (!ghostEl) return;
-    ghostEl.style.left = `${clientX}px`;
-    ghostEl.style.top = `${clientY}px`;
-    ghostEl.style.transform = `translate(-50%, -50%) scale(1.1) rotate(-3deg)`;
+    ghostEl.style.left = '0px';
+    ghostEl.style.top = '0px';
+    ghostEl.style.willChange = 'transform';
+    ghostEl.style.transform = `translate3d(${clientX}px, ${clientY}px, 0) translate(-50%, -50%) scale(1.08) rotate(0deg)`;
   }
 
   startAutoScroll(speed) {

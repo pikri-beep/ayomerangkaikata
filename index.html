@@ -24,9 +24,43 @@
 </head>
 <body>
 
+  <!-- Main Menu Screen (Landing & Hub) -->
+  <section id="main-menu-screen" class="main-menu-screen" aria-label="Menu Utama">
+    <div class="main-menu-card">
+      <div class="menu-hero">
+        <img src="/images/ui/app_logo_papercraft.png" alt="Logo Ayo Merangkai Kata" class="menu-logo-img">
+        <h1 class="menu-title">Ayo Merangkai Kata</h1>
+        <p class="menu-tagline">Petualangan Belajar Mengeja Papercraft & Doodle</p>
+        <div class="menu-progress-badge" id="menu-stars-badge">
+          <span>⭐</span>
+          <span id="menu-stars-count">0 / 17 Koleksi Dibuka</span>
+        </div>
+      </div>
+
+      <div class="menu-button-list">
+        <button class="btn-menu-action btn-menu-play" id="btn-menu-play" aria-label="Mulai Bermain">
+          <span>▶️</span>
+          <span>Mulai Bermain</span>
+        </button>
+        <button class="btn-menu-action btn-menu-album" id="btn-menu-album" aria-label="Buka Album Stiker">
+          <span>📒</span>
+          <span>Album Diorama Stiker</span>
+        </button>
+        <button class="btn-menu-action btn-menu-settings" id="btn-menu-settings" aria-label="Pengaturan">
+          <span>⚙️</span>
+          <span>Pengaturan</span>
+        </button>
+        <button class="btn-menu-action btn-menu-parent" id="btn-menu-parent" aria-label="Studio Orang Tua">
+          <span>🔒</span>
+          <span>Studio Orang Tua & Rekaman</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
   <!-- Top Papercraft App Header -->
   <header class="app-header">
-    <div class="brand-badge">
+    <div class="brand-badge" id="app-brand-badge" title="Klik logo 4x untuk akses studio orang tua">
       <img src="/images/ui/app_logo_papercraft.png" alt="Ayo Merangkai Kata" class="brand-logo-img">
       <div class="brand-text-block">
         <h1 class="brand-title">Ayo Merangkai Kata</h1>
@@ -35,13 +69,16 @@
     </div>
 
     <div class="header-controls">
-      <button class="btn-icon-pill" id="btn-sound-toggle" aria-label="Nyalakan atau Matikan Suara">
-        <span id="sound-toggle-icon" class="control-emoji">🔊</span>
-        <span class="control-label">Suara</span>
+      <button class="btn-icon-pill btn-menu-home" id="btn-nav-menu" aria-label="Kembali ke Menu Utama" title="Kembali ke Menu Utama">
+        <span class="control-emoji">🏠</span>
+        <span class="control-label">Menu</span>
       </button>
-      <button class="btn-icon-pill btn-stickers" id="btn-open-stickers" aria-label="Buka Buku Stiker Koleksi Kata">
+      <button class="btn-icon-pill btn-stickers" id="btn-open-stickers" aria-label="Buka Buku Stiker Koleksi Kata" title="Buka Buku Stiker">
         <span class="control-emoji">📒</span>
-        <span class="control-label">Buku Stiker</span>
+        <span class="control-label">Stiker</span>
+      </button>
+      <button class="btn-icon-pill" id="btn-open-settings" aria-label="Pengaturan" title="Pengaturan">
+        <span class="control-emoji">⚙️</span>
       </button>
     </div>
   </header>
@@ -120,6 +157,55 @@
         </button>
         <div style="font-size: 0.8rem; color: #8E9AAF;">PIN Bawaan: <strong>1234</strong></div>
       </form>
+    </div>
+  </div>
+
+  <!-- Settings Modal Dialog -->
+  <div id="settings-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+    <div class="settings-modal-card animate-pop-in">
+      <button class="modal-close-btn" id="btn-close-settings" aria-label="Tutup Pengaturan">✕</button>
+      <h2 id="settings-modal-title" class="settings-title">⚙️ Pengaturan</h2>
+
+      <div class="settings-list">
+        <!-- SFX Audio Toggle -->
+        <div class="settings-item">
+          <span class="settings-item-label">
+            <span>🔊</span>
+            <span>Efek Suara (SFX)</span>
+          </span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="setting-sfx-toggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <!-- Phonics Speech Toggle -->
+        <div class="settings-item">
+          <span class="settings-item-label">
+            <span>🗣️</span>
+            <span>Lafal Suara Kata</span>
+          </span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="setting-speech-toggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <!-- Reset Game Progress -->
+        <div class="settings-item" style="flex-direction: column; align-items: stretch; gap: 0.6rem;">
+          <span class="settings-item-label" style="font-size: 1rem;">
+            <span>🔄</span>
+            <span>Progres Permainan</span>
+          </span>
+          <button class="btn-reset-progress" id="btn-reset-progress">
+            Ulangi Progres dari Kata Pertama
+          </button>
+        </div>
+      </div>
+
+      <button class="btn-paper btn-paper-primary" id="btn-save-settings" style="width: 100%; justify-content: center; font-size: 1.15rem; padding: 0.75rem;">
+        <span>Selesai</span>
+      </button>
     </div>
   </div>
 

@@ -26,9 +26,38 @@ class MonsterPhonicsApp {
   async startApp() {
     await wordRepository.init();
     this.loadWord(this.currentWordIndex);
+    this.updateMenuStats();
+  }
+
+  updateMenuStats() {
+    if (!this.menuStarsCount) return;
+    const words = wordRepository.getWords();
+    const completed = this.stickerBook ? this.stickerBook.getCompletedWordIds() : [];
+    this.menuStarsCount.textContent = `${completed.length} / ${words.length} Koleksi Terbuka`;
   }
 
   initDOM() {
+    // Main Menu Elements
+    this.mainMenuScreen = document.getElementById('main-menu-screen');
+    this.btnMenuPlay = document.getElementById('btn-menu-play');
+    this.btnMenuAlbum = document.getElementById('btn-menu-album');
+    this.btnMenuSettings = document.getElementById('btn-menu-settings');
+    this.btnMenuParent = document.getElementById('btn-menu-parent');
+    this.menuStarsCount = document.getElementById('menu-stars-count');
+
+    // Header Controls
+    this.btnNavMenu = document.getElementById('btn-nav-menu');
+    this.btnOpenSettings = document.getElementById('btn-open-settings');
+
+    // Settings Modal Elements
+    this.settingsModal = document.getElementById('settings-modal');
+    this.btnCloseSettings = document.getElementById('btn-close-settings');
+    this.btnSaveSettings = document.getElementById('btn-save-settings');
+    this.settingSfxToggle = document.getElementById('setting-sfx-toggle');
+    this.settingSpeechToggle = document.getElementById('setting-speech-toggle');
+    this.btnResetProgress = document.getElementById('btn-reset-progress');
+
+    // Game Arena Elements
     this.categoryBadgeEl = document.getElementById('mission-category');
     this.progressTagEl = document.getElementById('mission-progress-tag');
     this.hintTextEl = document.getElementById('mission-hint');
@@ -37,8 +66,6 @@ class MonsterPhonicsApp {
     this.trayEl = document.getElementById('monster-tray');
     this.btnPrevWord = document.getElementById('btn-prev-word');
     this.btnNextWord = document.getElementById('btn-next-word-top');
-    this.btnSoundToggle = document.getElementById('btn-sound-toggle');
-    this.soundIconEl = document.getElementById('sound-toggle-icon');
     this.btnStickers = document.getElementById('btn-open-stickers');
     this.btnTidyDesk = document.getElementById('btn-tidy-desk');
     this.theaterContainerEl = document.getElementById('vignette-theater-container');
@@ -69,25 +96,115 @@ class MonsterPhonicsApp {
       stickerBook: this.stickerBook,
       onNextWord: () => this.nextWord(),
       onOpenStickerBook: () => this.stickerBook.show(),
-      onSaveSticker: (id) => this.stickerBook.saveCompletedWord(id)
+      onSaveSticker: (id) => {
+        this.stickerBook.saveCompletedWord(id);
+        this.updateMenuStats();
+      }
     });
   }
 
   bindGlobalEvents() {
-    // Sound Toggle
-    this.btnSoundToggle.addEventListener('click', () => {
-      const isMuted = audioEngine.toggleMute();
-      this.soundIconEl.textContent = isMuted ? '🔇' : '🔊';
-    });
+    // 1. Main Menu Navigation
+    if (this.btnMenuPlay) {
+      this.btnMenuPlay.addEventListener('click', () => {
+        audioEngine.playPaperGrab();
+        if (this.mainMenuScreen) {
+          this.mainMenuScreen.classList.add('hidden');
+        }
+        setTimeout(() => {
+          this.dragDropEngine.scatterLetters();
+        }, 80);
+      });
+    }
+
+    if (this.btnMenuAlbum) {
+      this.btnMenuAlbum.addEventListener('click', () => {
+        audioEngine.playPaperGrab();
+        this.stickerBook.show();
+      });
+    }
+
+    if (this.btnMenuSettings) {
+      this.btnMenuSettings.addEventListener('click', () => {
+        audioEngine.playPaperGrab();
+        if (this.settingsModal) {
+          this.settingsModal.classList.remove('hidden');
+        }
+      });
+    }
+
+    if (this.btnNavMenu) {
+      this.btnNavMenu.addEventListener('click', () => {
+        audioEngine.playPaperGrab();
+        this.updateMenuStats();
+        if (this.mainMenuScreen) {
+          this.mainMenuScreen.classList.remove('hidden');
+        }
+      });
+    }
+
+    if (this.btnOpenSettings) {
+      this.btnOpenSettings.addEventListener('click', () => {
+        audioEngine.playPaperGrab();
+        if (this.settingsModal) {
+          this.settingsModal.classList.remove('hidden');
+        }
+      });
+    }
+
+    // 2. Settings Modal Controls
+    if (this.btnCloseSettings) {
+      this.btnCloseSettings.addEventListener('click', () => {
+        if (this.settingsModal) this.settingsModal.classList.add('hidden');
+      });
+    }
+
+    if (this.btnSaveSettings) {
+      this.btnSaveSettings.addEventListener('click', () => {
+        audioEngine.playPaperGrab();
+        if (this.settingsModal) this.settingsModal.classList.add('hidden');
+      });
+    }
+
+    if (this.settingSfxToggle) {
+      this.settingSfxToggle.checked = !audioEngine.isMuted;
+      this.settingSfxToggle.addEventListener('change', (e) => {
+        if (e.target.checked) {
+          audioEngine.unmute();
+        } else {
+          audioEngine.mute();
+        }
+      });
+    }
+
+    if (this.settingSpeechToggle) {
+      this.settingSpeechToggle.addEventListener('change', (e) => {
+        audioEngine.speechEnabled = e.target.checked;
+      });
+    }
+
+    if (this.btnResetProgress) {
+      this.btnResetProgress.addEventListener('click', () => {
+        if (confirm('Ulangi permainan dari awal? Semua koleksi stiker diorama akan direset.')) {
+          localStorage.removeItem('monster_phonics_completed_words');
+          localStorage.removeItem('monster_phonics_diorama_stickers');
+          this.currentWordIndex = 0;
+          this.loadWord(0);
+          this.updateMenuStats();
+          if (this.settingsModal) this.settingsModal.classList.add('hidden');
+          alert('Progres berhasil direset! Mari belajar merangkai kata dari awal.');
+        }
+      });
+    }
 
     // Word Navigators
     this.btnPrevWord.addEventListener('click', () => {
-      audioEngine.playGrab();
+      audioEngine.playPaperGrab();
       this.prevWord();
     });
 
     this.btnNextWord.addEventListener('click', () => {
-      audioEngine.playGrab();
+      audioEngine.playPaperGrab();
       this.nextWord();
     });
 
@@ -96,16 +213,16 @@ class MonsterPhonicsApp {
       this.hintBoxEl.style.cursor = 'pointer';
       this.hintBoxEl.setAttribute('title', 'Sentuh untuk dengarkan bunyi kata!');
       this.hintBoxEl.addEventListener('click', () => {
-        audioEngine.playGrab();
+        audioEngine.playPaperGrab();
         if (this.currentWordData) {
           audioEngine.speakWordSequence(this.currentWordData);
         }
       });
     }
 
-    // Open Sticker Book
+    // Open Sticker Book from Game Arena
     this.btnStickers.addEventListener('click', () => {
-      audioEngine.playGrab();
+      audioEngine.playPaperGrab();
       this.stickerBook.show();
     });
 
@@ -121,7 +238,9 @@ class MonsterPhonicsApp {
       // Ignore if user is currently typing in an input or textarea
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
-      // Ignore if a modal dialog is currently active
+      // Ignore if main menu or modal dialog is currently active
+      if (this.mainMenuScreen && !this.mainMenuScreen.classList.contains('hidden')) return;
+      if (this.settingsModal && !this.settingsModal.classList.contains('hidden')) return;
       if (this.theaterContainerEl && !this.theaterContainerEl.classList.contains('hidden')) return;
       if (this.stickerBookContainerEl && !this.stickerBookContainerEl.classList.contains('hidden')) return;
       if (this.parentalGateModal && !this.parentalGateModal.classList.contains('hidden')) return;
@@ -172,13 +291,19 @@ class MonsterPhonicsApp {
     let longPressTimer = null;
 
     const openParentalGate = () => {
-      audioEngine.playGrab();
+      audioEngine.playPaperGrab();
       const challenge = parentalLock.generateChallenge();
       this.parentalChallengeText.textContent = challenge.question;
       this.parentalGateInput.value = '';
       this.parentalGateModal.classList.remove('hidden');
       setTimeout(() => this.parentalGateInput.focus(), 150);
     };
+
+    if (this.btnMenuParent) {
+      this.btnMenuParent.addEventListener('click', () => {
+        openParentalGate();
+      });
+    }
 
     if (this.brandBadgeEl) {
       this.brandBadgeEl.style.userSelect = 'none';

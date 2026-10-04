@@ -85,12 +85,11 @@ export class DragDropEngine {
 
       const posX = Math.max(pad, Math.min(deskW - cardW - pad, pad + col * cellW + (cellW - cardW) / 2 + jitterX));
       const posY = Math.max(pad, Math.min(deskH - cardH - pad, pad + row * cellH + (cellH - cardH) / 2 + jitterY));
-      const randomRot = (Math.random() - 0.5) * 22; // -11deg to +11deg
 
       card.style.position = 'absolute';
       card.style.left = `${posX}px`;
       card.style.top = `${posY}px`;
-      card.style.transform = `rotate(${randomRot}deg) scale(1)`;
+      card.style.transform = 'rotate(0deg) scale(1)';
       card.style.zIndex = `${10 + idx}`;
       card.style.visibility = 'visible';
     });
@@ -128,7 +127,7 @@ export class DragDropEngine {
       const posX = pad + col * cellW + (cellW - cardW) / 2;
       const posY = pad + row * cellH + (cellH - cardH) / 2;
 
-      card.style.transition = 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+      card.style.transition = 'transform 0.25s ease, left 0.25s ease, top 0.25s ease';
       card.style.position = 'absolute';
       card.style.left = `${posX}px`;
       card.style.top = `${posY}px`;
@@ -138,12 +137,12 @@ export class DragDropEngine {
 
       setTimeout(() => {
         card.style.transition = '';
-      }, 350);
+      }, 280);
     });
   }
 
   attachMonster(monsterEl, letter) {
-    monsterEl.style.touchAction = 'none'; // Prevent scroll while dragging
+    monsterEl.style.touchAction = 'none';
 
     let downTime = 0;
     let downX = 0;
@@ -152,13 +151,25 @@ export class DragDropEngine {
     const onPointerDown = (e) => {
       // Only single touch / primary mouse button; not if already dragging something
       if (this.isDragging || (e.button !== undefined && e.button !== 0)) return;
-      // Don't pick up already placed cards
       if (monsterEl.classList.contains('is-placed')) return;
       e.preventDefault();
 
       downTime = Date.now();
       downX = e.clientX;
       downY = e.clientY;
+
+      // Cache target slot positions once on pickup — eliminates layout reflow during drag!
+      this._cachedSlotRects = this.targetSlots.map(slot => {
+        if (!slot.el) return null;
+        const r = slot.el.getBoundingClientRect();
+        return {
+          slot,
+          expectedLetter: slot.expectedLetter,
+          centerX: r.left + r.width / 2,
+          centerY: r.top + r.height / 2,
+          rect: r
+        };
+      }).filter(Boolean);
 
       // Audio context unlock & tactile paper grab
       audioEngine.ensureContext();
@@ -167,9 +178,9 @@ export class DragDropEngine {
       this.isDragging = true;
       this.activePointerId = e.pointerId;
       this.activeMonsterEl = monsterEl;
+      this.activeSlot = null;
       monsterEl.setPointerCapture(e.pointerId);
 
-      // Bring to top
       this.topZIndex = (this.topZIndex || 30) + 1;
       monsterEl.style.zIndex = this.topZIndex;
 
@@ -177,33 +188,41 @@ export class DragDropEngine {
       this.prevX = e.clientX;
       this.prevY = e.clientY;
 
-      // Start looping phonics chant!
+      // Start looping phonics chant
       audioEngine.startPhonicsChant(letter);
 
-      // Generate a slight random rotation to simulate physical paper being picked up by hand
-      this.pickupAngle = (Math.random() - 0.5) * 12;
+      this.pickupAngle = 0;
 
-      // Create animated floating drag ghost with paper-lifted physics
-      this.createDragGhost(letter, e.clientX, e.clientY, this.pickupAngle);
+      // Create hardware-accelerated drag ghost
+      this.createDragGhost(letter, e.clientX, e.clientY, 0);
       monsterEl.classList.add('is-being-dragged', 'paper-lifted');
-      monsterEl.style.visibility = 'hidden'; // Hide original while ghost tracks finger
+      monsterEl.style.visibility = 'hidden';
+
+      let pendingX = e.clientX;
+      let pendingY = e.clientY;
+      let pendingTilt = 0;
 
       const onPointerMove = (moveEvt) => {
         if (!this.isDragging || moveEvt.pointerId !== this.activePointerId) return;
         moveEvt.preventDefault();
 
-        // Calculate velocity for natural paper tilting
+        // Calculate velocity
         this.velocityX = moveEvt.clientX - this.prevX;
         this.prevX = moveEvt.clientX;
         this.prevY = moveEvt.clientY;
 
-        const dynamicTilt = Math.max(-15, Math.min(15, this.velocityX * 1.3));
-        const totalTilt = this.pickupAngle + dynamicTilt;
+        pendingTilt = Math.max(-10, Math.min(10, this.velocityX * 0.9));
+        pendingX = moveEvt.clientX;
+        pendingY = moveEvt.clientY;
 
-        if (this.dragGhost) {
-          this.dragGhost.style.left = `${moveEvt.clientX}px`;
-          this.dragGhost.style.top = `${moveEvt.clientY}px`;
-          this.dragGhost.style.transform = `translate(-50%, -50%) scale(1.15) rotate(${totalTilt}deg)`;
+        // Schedule GPU transform update on animation frame
+        if (!this._rafId) {
+          this._rafId = requestAnimationFrame(() => {
+            this._rafId = null;
+            if (this.dragGhost) {
+              this.dragGhost.style.transform = `translate3d(${pendingX}px, ${pendingY}px, 0) translate(-50%, -50%) scale(1.12) rotate(${pendingTilt}deg)`;
+            }
+          });
         }
 
         this.checkSlotProximity(moveEvt.clientX, moveEvt.clientY, letter);
@@ -213,16 +232,21 @@ export class DragDropEngine {
         if (upEvt && upEvt.pointerId !== this.activePointerId) return;
         this.isDragging = false;
 
+        if (this._rafId) {
+          cancelAnimationFrame(this._rafId);
+          this._rafId = null;
+        }
+
         try { monsterEl.releasePointerCapture(this.activePointerId); } catch (_) {}
         monsterEl.removeEventListener('pointermove', onPointerMove);
         monsterEl.removeEventListener('pointerup', cleanup);
         monsterEl.removeEventListener('pointercancel', cleanup);
 
-        // Stop continuous chanting
         audioEngine.stopPhonicsChant();
 
         // Clear slot highlights
-        this.targetSlots.forEach(s => s.el.classList.remove('slot-hover-snap'));
+        this.targetSlots.forEach(s => s.el && s.el.classList.remove('slot-hover-snap'));
+        this.activeSlot = null;
 
         if (upEvt) {
           const moveDist = Math.hypot(upEvt.clientX - downX, upEvt.clientY - downY);
@@ -239,7 +263,6 @@ export class DragDropEngine {
 
           this.handleDrop(upEvt.clientX, upEvt.clientY, letter, monsterEl);
         } else {
-          // Cancelled — restore card to tray
           this._restoreCard(monsterEl);
         }
       };
@@ -264,9 +287,10 @@ export class DragDropEngine {
     const ghost = document.createElement('div');
     ghost.className = 'monster-drag-ghost paper-lifted paper-drag-lifted';
     ghost.style.position = 'fixed';
-    ghost.style.left = `${x}px`;
-    ghost.style.top = `${y}px`;
-    ghost.style.transform = `translate(-50%, -50%) scale(1.15) rotate(${initialAngle}deg)`;
+    ghost.style.left = '0px';
+    ghost.style.top = '0px';
+    ghost.style.willChange = 'transform';
+    ghost.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%) scale(1.12) rotate(${initialAngle}deg)`;
     ghost.style.width = '96px';
     ghost.style.height = '96px';
     ghost.style.pointerEvents = 'none';
@@ -279,30 +303,32 @@ export class DragDropEngine {
 
   checkSlotProximity(clientX, clientY, letter) {
     let hoveredSlot = null;
-    const snapDistance = 80; // px
+    let minDistance = 85;
 
-    this.targetSlots.forEach(slot => {
-      if (slot.isFilled) return;
-      const rect = slot.el.getBoundingClientRect();
-      const slotCenterX = rect.left + rect.width / 2;
-      const slotCenterY = rect.top + rect.height / 2;
-      const dist = Math.hypot(clientX - slotCenterX, clientY - slotCenterY);
+    if (!this._cachedSlotRects) return;
 
-      // Must match expected letter AND be close enough
-      if (dist < snapDistance && slot.expectedLetter === letter) {
-        // If multiple unfilled slots share same letter, pick the closest
-        if (!hoveredSlot || dist < Math.hypot(clientX - (hoveredSlot.el.getBoundingClientRect().left + hoveredSlot.el.getBoundingClientRect().width / 2), clientY - (hoveredSlot.el.getBoundingClientRect().top + hoveredSlot.el.getBoundingClientRect().height / 2))) {
-          hoveredSlot = slot;
-        }
+    for (let i = 0; i < this._cachedSlotRects.length; i++) {
+      const item = this._cachedSlotRects[i];
+      if (item.slot.isFilled) continue;
+      if (item.expectedLetter !== letter) continue;
+
+      const dist = Math.hypot(clientX - item.centerX, clientY - item.centerY);
+      if (dist < minDistance) {
+        minDistance = dist;
+        hoveredSlot = item.slot;
       }
-    });
+    }
 
-    // Update slot highlight visual
-    this.targetSlots.forEach(slot => {
-      slot.el.classList.toggle('slot-hover-snap', slot === hoveredSlot);
-    });
-
-    this.activeSlot = hoveredSlot;
+    if (hoveredSlot !== this.activeSlot) {
+      if (this.activeSlot && this.activeSlot.el) {
+        this.activeSlot.el.classList.remove('slot-hover-snap');
+      }
+      this.activeSlot = hoveredSlot;
+      if (this.activeSlot && this.activeSlot.el) {
+        this.activeSlot.el.classList.add('slot-hover-snap');
+        audioEngine.playSlotSnapHover();
+      }
+    }
   }
 
   snapCardToSlot(monsterEl, targetSlot, letter) {
@@ -319,15 +345,15 @@ export class DragDropEngine {
     if (ghost) {
       ghost.classList.remove('paper-drag-lifted', 'paper-lifted');
       ghost.classList.add('paper-sticking');
-      ghost.style.transition = 'all 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-      ghost.style.left = `${targetX}px`;
-      ghost.style.top = `${targetY}px`;
-      ghost.style.transform = 'translate(-50%, -50%) scale(1) rotate(0deg)';
+      ghost.style.transition = 'transform 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+      ghost.style.left = '0px';
+      ghost.style.top = '0px';
+      ghost.style.transform = `translate3d(${targetX}px, ${targetY}px, 0) translate(-50%, -50%) scale(1) rotate(0deg)`;
 
       setTimeout(() => {
         ghost.remove();
         this._finalizeSlot(monsterEl, targetSlot, letter, targetX, targetY);
-      }, 240);
+      }, 230);
     } else {
       this._finalizeSlot(monsterEl, targetSlot, letter, targetX, targetY);
     }
@@ -338,8 +364,9 @@ export class DragDropEngine {
     const ghost = document.createElement('div');
     ghost.className = 'monster-drag-ghost paper-sticking';
     ghost.style.position = 'fixed';
-    ghost.style.left = `${rect.left + rect.width / 2}px`;
-    ghost.style.top = `${rect.top + rect.height / 2}px`;
+    ghost.style.left = '0px';
+    ghost.style.top = '0px';
+    ghost.style.transform = `translate3d(${rect.left + rect.width / 2}px, ${rect.top + rect.height / 2}px, 0) translate(-50%, -50%) scale(1)`;
     ghost.style.width = '84px';
     ghost.style.height = '84px';
     ghost.style.pointerEvents = 'none';
