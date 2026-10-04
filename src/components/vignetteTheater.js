@@ -155,7 +155,7 @@ export class VignetteTheater {
                   <!-- 3D folded corner cue -->
                   <div class="peel-corner-fold" aria-hidden="true"></div>
                   <div class="peel-sticker-art">
-                    <img src="${wordData.image}" alt="${wordData.word}" draggable="false"
+                    <img src="${wordData.image}" alt="${wordData.word}" draggable="false" loading="lazy" decoding="async"
                          onerror="this.style.display='none'; this.parentElement.textContent='${wordData.vignette?.type === 'cat' ? '🐱' : '⭐'}'">
                   </div>
                   <div class="peel-sticker-tag">${wordData.word}</div>
@@ -315,7 +315,7 @@ export class VignetteTheater {
       sticker.style.transform = `translate(-50%, -50%) rotate(${p.rotation || 0}deg)`;
       sticker.innerHTML = `
         <div class="canvas-sticker-art">
-          <img src="${wordItem.image}" alt="${wordItem.word}" onerror="this.style.display='none'">
+          <img src="${wordItem.image}" alt="${wordItem.word}" loading="lazy" decoding="async" onerror="this.style.display='none'">
         </div>
         <div class="canvas-sticker-tag">${wordItem.word}</div>
       `;

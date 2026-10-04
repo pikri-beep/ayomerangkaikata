@@ -222,7 +222,7 @@ export class StickerBook {
         card.innerHTML = `
           <div class="card-status-badge">✅ Terkumpul</div>
           <div class="card-sticker-illustration">
-            <img src="${wordItem.image}" alt="${wordItem.word}" class="card-diecut-img">
+            <img src="${wordItem.image}" alt="${wordItem.word}" class="card-diecut-img" loading="lazy" decoding="async">
           </div>
           <div class="card-word-title">${wordItem.word}</div>
           <div class="card-category-tag">${wordItem.category}</div>
@@ -327,7 +327,7 @@ export class StickerBook {
 
     stickerEl.innerHTML = `
       <div class="canvas-sticker-art">
-        ${wordItem.image ? `<img src="${wordItem.image}" alt="${wordItem.word}">` : '🎨'}
+        ${wordItem.image ? `<img src="${wordItem.image}" alt="${wordItem.word}" loading="lazy" decoding="async">` : '🎨'}
       </div>
       <div class="canvas-sticker-tag">${wordItem.word}</div>
     `;

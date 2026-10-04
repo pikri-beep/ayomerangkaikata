@@ -127,11 +127,27 @@ class AudioEngine {
   }
 
   triggerHaptic(duration = 20) {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (this._lastHaptic && now - this._lastHaptic < 80) return;
+    this._lastHaptic = now;
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate(duration);
       } catch (e) {}
     }
+  }
+
+  getNoiseBuffer() {
+    if (!this._cachedNoiseBuffer && this.ctx) {
+      const bufferSize = Math.floor(this.ctx.sampleRate * 0.08);
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
+      }
+      this._cachedNoiseBuffer = buffer;
+    }
+    return this._cachedNoiseBuffer;
   }
 
   // --- Web Audio SFX ---
@@ -145,28 +161,25 @@ class AudioEngine {
 
     const now = this.ctx.currentTime;
 
-    // 1. Noise burst for paper friction
-    const bufferSize = Math.floor(this.ctx.sampleRate * 0.08);
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
+    // 1. Re-use cached noise burst buffer for paper friction (0 CPU allocation / 0 GC lag)
+    const buffer = this.getNoiseBuffer();
+    if (buffer) {
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buffer;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(2400, now);
+      filter.Q.value = 1.2;
+
+      const noiseGain = this.ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.25, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+      noise.connect(filter);
+      filter.connect(noiseGain);
+      noiseGain.connect(this.ctx.destination);
+      noise.start(now);
     }
-    const noise = this.ctx.createBufferSource();
-    noise.buffer = buffer;
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(2400, now);
-    filter.Q.value = 1.2;
-
-    const noiseGain = this.ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.25, now);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-
-    noise.connect(filter);
-    filter.connect(noiseGain);
-    noiseGain.connect(this.ctx.destination);
-    noise.start(now);
 
     // 2. Playful tactile pop
     const osc = this.ctx.createOscillator();
@@ -725,51 +738,37 @@ class AudioEngine {
     this.currentChantingLetter = letter.toUpperCase();
     const info = LETTER_PHONICS_MAP[this.currentChantingLetter] || { chant: letter, sound: letter };
 
-    const playOneChant = async () => {
-      if (this.isMuted || !this.currentChantingLetter) return;
+    // 1. Instant, ultra-lightweight melodic chirp via Web Audio (0 CPU lag / 60fps smooth)
+    if (this.ctx) {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      const baseFreq = 340 + (this.currentChantingLetter.charCodeAt(0) - 65) * 16;
+      osc.frequency.setValueAtTime(baseFreq, now);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.25, now + 0.12);
 
-      const hasCustom = await audioStorage.hasAudio('letter_' + this.currentChantingLetter);
-      if (hasCustom) {
-        this.playCustomAudio('letter_' + this.currentChantingLetter);
-        return;
-      }
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
 
-      // 1. Cute melodic chirp via Web Audio
-      if (this.ctx) {
-        const now = this.ctx.currentTime;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sine';
-        // Pitch based on letter char code to give each monster its unique tone
-        const baseFreq = 320 + (letter.charCodeAt(0) - 65) * 16;
-        osc.frequency.setValueAtTime(baseFreq, now);
-        osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.3, now + 0.12);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.18);
+    }
 
-        gain.gain.setValueAtTime(0.2, now);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
-
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.18);
-      }
-
-      // 2. Kid voice phonics utterance via Web Speech API
-      if (this.speechSynth && !this.speechSynth.speaking) {
+    // 2. Play speech phonics ONCE on pickup (only if enabled, never in a continuous loop!)
+    if (this.speechEnabled && this.speechSynth && !this.speechSynth.speaking) {
+      try {
         const utter = new SpeechSynthesisUtterance(info.sound || letter);
         utter.lang = 'id-ID';
         if (this.idVoice) utter.voice = this.idVoice;
-        utter.pitch = 1.45; // High playful cartoon pitch
-        utter.rate = 1.15; // Crisp snappy pronunciation
-        utter.volume = 0.9;
+        utter.pitch = 1.4;
+        utter.rate = 1.2;
+        utter.volume = 0.85;
         this.speechSynth.speak(utter);
-      }
-    };
-
-    // Immediate first chant
-    playOneChant();
-    // Continuous loop while dragged
-    this.phonicsInterval = setInterval(playOneChant, 700);
+      } catch (_) {}
+    }
   }
 
   stopPhonicsChant() {
@@ -778,12 +777,6 @@ class AudioEngine {
       this.phonicsInterval = null;
     }
     this.currentChantingLetter = null;
-    if (this.speechSynth && this.speechSynth.speaking) {
-      // Don't cancel if already in whole word reading
-      if (!this.isPlayingWordNarration) {
-        this.speechSynth.cancel();
-      }
-    }
   }
 
   // --- Word Phonics Spelling & Definition Reading ---

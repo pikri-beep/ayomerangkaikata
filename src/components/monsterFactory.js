@@ -591,9 +591,6 @@ export function createMonsterSVG(letter, options = {}) {
           <stop offset="65%" stop-color="${profile.bg}" />
           <stop offset="100%" stop-color="${profile.bg}" />
         </radialGradient>
-        <filter id="monster-sticker-shadow" x="-20%" y="-20%" width="140%" height="145%">
-          <feDropShadow dx="1.5" dy="3.5" stdDeviation="2.5" flood-color="#282A3A" flood-opacity="0.22" />
-        </filter>
       </defs>
 
       ${celebrationStars}
@@ -618,7 +615,6 @@ export function createMonsterSVG(letter, options = {}) {
             stroke-width="4.5" 
             stroke-linejoin="round" 
             stroke-linecap="round"
-            filter="url(#monster-sticker-shadow)" 
             class="monster-body" />
 
       <!-- Texture / Spots -->

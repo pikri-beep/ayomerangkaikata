@@ -524,10 +524,9 @@ body::after {
   min-height: 290px;
   background-color: var(--paper-tray);
   background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.25)),
-    url('/images/textures/texture_desk_mat.jpg');
-  background-size: cover;
-  background-position: center;
+    radial-gradient(#CBD5E1 1.5px, transparent 1.5px),
+    linear-gradient(rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.4));
+  background-size: 24px 24px, auto;
   border: 3.5px solid var(--color-marker);
   border-radius: 18px;
   box-shadow: inset 0 0 25px rgba(40, 42, 58, 0.08), var(--shadow-paper-tray);
@@ -545,14 +544,13 @@ body::after {
   height: clamp(74px, 16vw, 94px);
   cursor: grab;
   touch-action: none;
-  transition: transform 0.15s ease, filter 0.15s ease;
+  transition: transform 0.12s ease;
   filter: drop-shadow(2px 3px 0px rgba(40, 42, 58, 0.7));
-  will-change: left, top, transform;
 }
 
 .monster-letter-card:hover {
   transform: scale(1.08);
-  filter: drop-shadow(3px 6px 0px rgba(40, 42, 58, 0.85));
+  filter: drop-shadow(3px 5px 0px rgba(40, 42, 58, 0.85));
 }
 
 .monster-letter-card:active {
@@ -568,16 +566,15 @@ body::after {
   display: none !important;
 }
 
-/* LIFTED PAPER PHYSICS (Drag Ghost) */
+/* LIFTED PAPER PHYSICS (Drag Ghost) - Crisp 0-blur drop-shadow for 60/120fps hardware blitting */
 .monster-drag-ghost {
   cursor: grabbing;
-  filter: drop-shadow(8px 18px 14px rgba(40, 42, 58, 0.32));
+  filter: drop-shadow(4px 6px 0px rgba(40, 42, 58, 0.5));
   transition: none;
 }
 
 .monster-drag-ghost.paper-drag-lifted {
-  /* Class toggled during dragstart */
-  filter: drop-shadow(10px 20px 16px rgba(40, 42, 58, 0.38)) !important;
+  filter: drop-shadow(5px 8px 0px rgba(40, 42, 58, 0.55)) !important;
 }
 
 .monster-drag-ghost.paper-sticking {
@@ -593,7 +590,7 @@ body::after {
 
 /* Authentic physical die-cut white outline inside SVG */
 .die-cut-sticker-svg .sticker-diecut-white-base {
-  filter: drop-shadow(1px 2px 3px rgba(40, 42, 58, 0.15));
+  /* No blurred filter: clean, sharp 0-cost white sticker contour */
 }
 
 /* Animated talking mouth when dragged */
@@ -859,13 +856,20 @@ body::after {
 .diorama-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(40, 42, 58, 0.7);
-  backdrop-filter: blur(6px);
+  background: rgba(40, 42, 58, 0.78);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
   padding: 0.75rem;
+}
+
+@supports (backdrop-filter: blur(4px)) {
+  @media (min-width: 768px) {
+    .diorama-backdrop {
+      backdrop-filter: blur(4px);
+    }
+  }
 }
 
 /* ==========================================================
@@ -1050,6 +1054,9 @@ body::after {
 }
 
 .gallery-sticker-card {
+  content-visibility: auto;
+  contain-intrinsic-size: 200px 240px;
+  contain: layout style paint;
   background: #FFFFFF;
   border: 3px solid var(--color-marker);
   border-radius: 18px;

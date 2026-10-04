@@ -215,17 +215,16 @@ export class DragDropEngine {
         pendingX = moveEvt.clientX;
         pendingY = moveEvt.clientY;
 
-        // Schedule GPU transform update on animation frame
+        // Schedule GPU transform update and hit-testing on animation frame (smooth 60/120fps)
         if (!this._rafId) {
           this._rafId = requestAnimationFrame(() => {
             this._rafId = null;
             if (this.dragGhost) {
               this.dragGhost.style.transform = `translate3d(${pendingX}px, ${pendingY}px, 0) translate(-50%, -50%) scale(1.12) rotate(${pendingTilt}deg)`;
             }
+            this.checkSlotProximity(pendingX, pendingY, letter);
           });
         }
-
-        this.checkSlotProximity(moveEvt.clientX, moveEvt.clientY, letter);
       };
 
       const cleanup = (upEvt) => {
