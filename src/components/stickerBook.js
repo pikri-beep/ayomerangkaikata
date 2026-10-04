@@ -1,5 +1,7 @@
-// Interactive Panoramic Papercraft Diorama Storybook Album
-// Enables children to freely place unlocked word stickers across a seamless 4-zone panorama world
+// Interactive Sticker Book & Diorama Album for Monster Phonics
+// Features a clean, crystal-clear 2-Tab experience:
+// 1. 📖 Galeri Buku Koleksi: Clean grid of all 17 collectible word stickers with audio preview and direct play
+// 2. 🗺️ Panggung Diorama: Full-sized panoramic habitat world with interactive sticker sound & animation reactions
 
 import { wordRepository } from '../services/wordRepository.js';
 import { audioEngine } from '../services/audioEngine.js';
@@ -13,12 +15,12 @@ export class StickerBook {
     this.containerEl = options.containerEl;
     this.onPlayWord = options.onPlayWord || (() => {});
 
+    this.activeTab = 'gallery'; // 'gallery' | 'diorama'
+    this.activeCategoryFilter = 'all';
+
     this.viewportEl = null;
     this.canvasEl = null;
-    this.drawerEl = null;
-    this.isDraggingSticker = false;
-    this.activeDragGhost = null;
-    this.activeStickerId = null;
+    this.placedStickersContainer = null;
   }
 
   getCompletedWordIds() {
@@ -49,18 +51,10 @@ export class StickerBook {
     }
   }
 
-  saveStickerPlacement(stickerId, x, y, rotation) {
+  saveStickerPlacement(stickerId, x, y, rotation = 0) {
     try {
       const placements = this.getStickerPlacements();
       placements[stickerId] = { x, y, rotation, isPlaced: true };
-      localStorage.setItem(STORAGE_PLACEMENTS_KEY, JSON.stringify(placements));
-    } catch {}
-  }
-
-  removeStickerPlacement(stickerId) {
-    try {
-      const placements = this.getStickerPlacements();
-      delete placements[stickerId];
       localStorage.setItem(STORAGE_PLACEMENTS_KEY, JSON.stringify(placements));
     } catch {}
   }
@@ -71,94 +65,114 @@ export class StickerBook {
     } catch {}
   }
 
-  show() {
+  show(initialTab = 'gallery', targetWordId = null) {
+    this.activeTab = initialTab;
     const words = wordRepository.getWords();
     const completedIds = this.getCompletedWordIds();
     const totalWords = words.length;
     const completedCount = completedIds.length;
-    const placements = this.getStickerPlacements();
+    const progressPercent = Math.round((completedCount / totalWords) * 100);
 
     this.containerEl.innerHTML = `
-      <div class="sticker-book-backdrop diorama-backdrop" role="dialog" aria-modal="true">
-        <div class="diorama-modal-window animate-pop-in">
-          <!-- Washi tape at top of album -->
+      <div class="sticker-book-backdrop diorama-backdrop" role="dialog" aria-modal="true" aria-labelledby="album-main-title">
+        <div class="diorama-modal-window album-window animate-pop-in">
+          <!-- Washi tape decoration at top -->
           <div class="washi-tape" aria-hidden="true"></div>
 
-          <!-- Header -->
-          <div class="diorama-header">
-            <div class="diorama-title-box">
-              <span class="diorama-header-icon" aria-hidden="true">🗺️</span>
+          <!-- Clean Header with Progress & Dual Tabs -->
+          <div class="album-header">
+            <div class="album-brand-section">
+              <span class="album-header-icon" aria-hidden="true">📒</span>
               <div>
-                <h2 class="diorama-title">Album Diorama Panorama</h2>
-                <div class="diorama-subtitle">Tempel stiker koleksimu bebas di dunia cerita kertas!</div>
+                <h2 id="album-main-title" class="album-title">Buku Koleksi Stiker</h2>
+                <div class="album-progress-text">
+                  ⭐ <strong>${completedCount}</strong> dari ${totalWords} Stiker Terkumpul (${progressPercent}%)
+                </div>
               </div>
             </div>
 
-            <!-- Quick Zone Navigators -->
-            <div class="diorama-zone-navs">
-              <button class="btn-zone-jump" data-target-x="0" title="Ke Padang Rumput">🌳 Taman</button>
-              <button class="btn-zone-jump" data-target-x="550" title="Ke Sungai Ceria">🐠 Sungai</button>
-              <button class="btn-zone-jump" data-target-x="1100" title="Ke Jalan Kota">🚗 Kota</button>
-              <button class="btn-zone-jump" data-target-x="1650" title="Ke Langit Bintang">☁️ Langit</button>
-            </div>
-
-            <div class="diorama-header-actions">
-              <div class="diorama-progress-pill" title="${completedCount} dari ${totalWords} stiker telah dibuka">
-                <span>⭐</span>
-                <strong>${completedCount} / ${totalWords}</strong>
-              </div>
-              <button class="btn-paper btn-reset-diorama" id="btn-reset-diorama" title="Kembalikan semua stiker ke laci bawah">
-                <span>🔄</span>
-                <span class="btn-text-hide-sm">Tata Ulang</span>
+            <!-- Big, Friendly Dual Tab Selector -->
+            <div class="album-tab-bar" role="tablist">
+              <button class="btn-album-tab ${this.activeTab === 'gallery' ? 'active' : ''}" id="tab-btn-gallery" role="tab" aria-selected="${this.activeTab === 'gallery'}">
+                <span>📖</span>
+                <span>Buku Koleksi</span>
               </button>
-              <button class="btn-close-modal btn-diorama-close" id="btn-close-stickers" aria-label="Tutup Album">✕</button>
+              <button class="btn-album-tab ${this.activeTab === 'diorama' ? 'active' : ''}" id="tab-btn-diorama" role="tab" aria-selected="${this.activeTab === 'diorama'}">
+                <span>🗺️</span>
+                <span>Panggung Diorama</span>
+              </button>
+            </div>
+
+            <div class="album-header-actions">
+              <button class="btn-close-modal btn-album-close" id="btn-close-stickers" aria-label="Tutup Album" title="Tutup Album">✕</button>
             </div>
           </div>
 
-          <!-- Panorama Viewport (Horizontal Scrollable Canvas with Slide Navigation) -->
-          <div class="peel-viewport-wrapper">
-            <button type="button" class="btn-diorama-slide btn-slide-prev" id="btn-album-slide-prev" aria-label="Geser ke kiri">◀</button>
-            <button type="button" class="btn-diorama-slide btn-slide-next" id="btn-album-slide-next" aria-label="Geser ke kanan">▶</button>
+          <!-- Tab Content 1: Sticker Book Gallery View -->
+          <div class="album-tab-content ${this.activeTab === 'gallery' ? 'active-view' : 'hidden-view'}" id="album-view-gallery">
+            <!-- Category Filter Bar -->
+            <div class="gallery-filter-bar">
+              <button class="btn-filter-pill ${this.activeCategoryFilter === 'all' ? 'active' : ''}" data-cat="all">🌟 Semua (17)</button>
+              <button class="btn-filter-pill ${this.activeCategoryFilter === 'hewan' ? 'active' : ''}" data-cat="hewan">🐱 Hewan (7)</button>
+              <button class="btn-filter-pill ${this.activeCategoryFilter === 'buah' ? 'active' : ''}" data-cat="buah">🍎 Buah & Makanan (3)</button>
+              <button class="btn-filter-pill ${this.activeCategoryFilter === 'benda' ? 'active' : ''}" data-cat="benda">⚽ Benda & Mobil (4)</button>
+              <button class="btn-filter-pill ${this.activeCategoryFilter === 'alam' ? 'active' : ''}" data-cat="alam">☁️ Alam (3)</button>
+            </div>
 
-            <div class="diorama-viewport" id="diorama-viewport">
-              <div class="diorama-canvas" id="diorama-canvas">
-                <!-- Habitat Strips Layer -->
-                <div class="peel-strips-layer" id="diorama-album-strips-layer"></div>
+            <!-- Grid of Sticker Cards -->
+            <div class="sticker-cards-grid" id="sticker-cards-grid">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
 
-                <!-- ZONE 1: Padang Rumput Ceria (0px - 550px) -->
-                <div class="diorama-zone zone-meadow" style="left: 0; width: 550px;">
-                  <div class="zone-badge">🌳 Padang Rumput Ceria</div>
+          <!-- Tab Content 2: Interactive Diorama World View -->
+          <div class="album-tab-content ${this.activeTab === 'diorama' ? 'active-view' : 'hidden-view'}" id="album-view-diorama">
+            <!-- Zone Jump Ribbons -->
+            <div class="diorama-zone-ribbon">
+              <span class="zone-ribbon-label">Zona Habitat:</span>
+              <button class="btn-zone-jump" data-target-x="0">🌳 Taman Rumput</button>
+              <button class="btn-zone-jump" data-target-x="550">🐠 Sungai Ceria</button>
+              <button class="btn-zone-jump" data-target-x="1100">🚗 Jalan Kota</button>
+              <button class="btn-zone-jump" data-target-x="1650">☁️ Langit Bintang</button>
+              <button class="btn-reset-diorama" id="btn-reset-diorama" title="Kembalikan posisi stiker ke habitat aslinya">
+                <span>🔄 Tata Ulang</span>
+              </button>
+            </div>
+
+            <!-- Full-Height Diorama Panorama Viewport -->
+            <div class="peel-viewport-wrapper diorama-stage-wrapper">
+              <button type="button" class="btn-diorama-slide btn-slide-prev" id="btn-album-slide-prev" aria-label="Geser ke kiri">◀</button>
+              <button type="button" class="btn-diorama-slide btn-slide-next" id="btn-album-slide-next" aria-label="Geser ke kanan">▶</button>
+
+              <div class="diorama-viewport" id="diorama-viewport">
+                <div class="diorama-canvas" id="diorama-canvas">
+                  <!-- Habitat Strips Layer -->
+                  <div class="peel-strips-layer" id="diorama-album-strips-layer"></div>
+
+                  <!-- Zone Badges inside canvas -->
+                  <div class="diorama-zone" style="left: 0; width: 550px;">
+                    <div class="zone-badge">🌳 Padang Rumput & Taman</div>
+                  </div>
+                  <div class="diorama-zone" style="left: 550px; width: 550px;">
+                    <div class="zone-badge">🐠 Sungai & Alam Liar</div>
+                  </div>
+                  <div class="diorama-zone" style="left: 1100px; width: 550px;">
+                    <div class="zone-badge">🚗 Jalan Raya & Kota</div>
+                  </div>
+                  <div class="diorama-zone" style="left: 1650px; width: 550px;">
+                    <div class="zone-badge">☁️ Bukit & Langit Bintang</div>
+                  </div>
+
+                  <!-- Placed interactive stickers container -->
+                  <div class="diorama-placed-stickers" id="diorama-placed-stickers"></div>
                 </div>
-
-                <!-- ZONE 2: Sungai & Danau (550px - 1100px) -->
-                <div class="diorama-zone zone-stream" style="left: 550px; width: 550px;">
-                  <div class="zone-badge">🐠 Sungai & Danau Ceria</div>
-                </div>
-
-                <!-- ZONE 3: Kota & Jalan Raya (1100px - 1650px) -->
-                <div class="diorama-zone zone-city" style="left: 1100px; width: 550px;">
-                  <div class="zone-badge">🚗 Kota & Jalan Raya</div>
-                </div>
-
-                <!-- ZONE 4: Bukit & Langit Bintang (1650px - 2200px) -->
-                <div class="diorama-zone zone-sky" style="left: 1650px; width: 550px;">
-                  <div class="zone-badge">☁️ Langit Bintang</div>
-                </div>
-
-                <!-- Dynamic Placed Stickers Container -->
-                <div class="diorama-placed-stickers" id="diorama-placed-stickers"></div>
               </div>
             </div>
-          </div>
 
-          <!-- Bottom Drawer / Sticker Collection Tray -->
-          <div class="diorama-drawer-section">
-            <div class="diorama-drawer-handle">
-              <span class="diorama-drawer-icon">📦</span>
-              <span class="diorama-drawer-label">Laci Stiker Koleksi: Geser stiker ke atas untuk menempel!</span>
-            </div>
-            <div class="diorama-drawer-tray" id="diorama-drawer-tray">
-              <!-- Dynamically injected drawer stickers -->
+            <!-- Bottom helper hint -->
+            <div class="diorama-bottom-hint">
+              <span>🖐️</span>
+              <span>Ketuk stiker apa saja di panggung untuk melihat reaksi lucunya, atau geser bebas untuk menata duniamu!</span>
             </div>
           </div>
 
@@ -170,90 +184,136 @@ export class StickerBook {
 
     this.viewportEl = document.getElementById('diorama-viewport');
     this.canvasEl = document.getElementById('diorama-canvas');
-    this.drawerEl = document.getElementById('diorama-drawer-tray');
     this.placedStickersContainer = document.getElementById('diorama-placed-stickers');
 
-    this.renderStickers();
+    this.renderGalleryGrid();
+    this.renderDioramaCanvas();
     this.bindEvents();
+
+    if (targetWordId && initialTab === 'diorama') {
+      setTimeout(() => this.focusWordInDiorama(targetWordId), 250);
+    }
   }
 
-  renderStickers() {
+  renderGalleryGrid() {
+    const gridEl = document.getElementById('sticker-cards-grid');
+    if (!gridEl) return;
+    gridEl.innerHTML = '';
+
+    const words = wordRepository.getWords();
+    const completedIds = this.getCompletedWordIds();
+
+    const filteredWords = words.filter(wordItem => {
+      if (this.activeCategoryFilter === 'all') return true;
+      const cat = (wordItem.category || '').toLowerCase();
+      if (this.activeCategoryFilter === 'hewan') return cat.includes('hewan');
+      if (this.activeCategoryFilter === 'buah') return cat.includes('buah') || cat.includes('makanan');
+      if (this.activeCategoryFilter === 'benda') return cat.includes('benda');
+      if (this.activeCategoryFilter === 'alam') return cat.includes('alam');
+      return true;
+    });
+
+    filteredWords.forEach(wordItem => {
+      const isUnlocked = completedIds.includes(wordItem.id);
+      const card = document.createElement('div');
+      card.className = `gallery-sticker-card ${isUnlocked ? 'card-unlocked' : 'card-locked'}`;
+
+      if (isUnlocked) {
+        card.innerHTML = `
+          <div class="card-status-badge">✅ Terkumpul</div>
+          <div class="card-sticker-illustration">
+            <img src="${wordItem.image}" alt="${wordItem.word}" class="card-diecut-img">
+          </div>
+          <div class="card-word-title">${wordItem.word}</div>
+          <div class="card-category-tag">${wordItem.category}</div>
+          <div class="card-buttons-row">
+            <button class="btn-card-action btn-card-sound" data-action="sound" title="Dengarkan lafal dan suara ${wordItem.word}">
+              <span>🔊</span>
+              <span>Bunyi</span>
+            </button>
+            <button class="btn-card-action btn-card-diorama" data-action="diorama" title="Lihat ${wordItem.word} di Panggung Diorama">
+              <span>🗺️</span>
+              <span>Diorama</span>
+            </button>
+            <button class="btn-card-action btn-card-play" data-action="play" title="Mainkan kata ${wordItem.word} sekarang">
+              <span>▶️</span>
+              <span>Mainkan</span>
+            </button>
+          </div>
+        `;
+
+        // Card button events
+        const btnSound = card.querySelector('[data-action="sound"]');
+        const btnDiorama = card.querySelector('[data-action="diorama"]');
+        const btnPlay = card.querySelector('[data-action="play"]');
+
+        btnSound.addEventListener('click', (e) => {
+          e.stopPropagation();
+          audioEngine.playPaperGrab();
+          this.triggerSoundAndSpeech(wordItem);
+        });
+
+        btnDiorama.addEventListener('click', (e) => {
+          e.stopPropagation();
+          audioEngine.playPaperGrab();
+          this.switchTab('diorama');
+          setTimeout(() => this.focusWordInDiorama(wordItem.id), 120);
+        });
+
+        btnPlay.addEventListener('click', (e) => {
+          e.stopPropagation();
+          audioEngine.playPaperGrab();
+          this.hide();
+          this.onPlayWord(wordItem);
+        });
+
+      } else {
+        card.innerHTML = `
+          <div class="card-status-badge locked-status">🔒 Terkunci</div>
+          <div class="card-sticker-illustration silhouette-box">
+            <span class="locked-big-icon">🔒</span>
+          </div>
+          <div class="card-word-title locked-title">???</div>
+          <div class="card-hint-text">💡 ${wordItem.hint || 'Selesaikan kata di game untuk membuka!'}</div>
+          <button class="btn-card-action btn-card-unlock" data-action="unlock-play" title="Mainkan kata ini sekarang untuk membuka stiker!">
+            <span>▶️</span>
+            <span>Buka Kata Ini</span>
+          </button>
+        `;
+
+        const btnUnlock = card.querySelector('[data-action="unlock-play"]');
+        btnUnlock.addEventListener('click', (e) => {
+          e.stopPropagation();
+          audioEngine.playPaperGrab();
+          this.hide();
+          this.onPlayWord(wordItem);
+        });
+      }
+
+      gridEl.appendChild(card);
+    });
+  }
+
+  renderDioramaCanvas() {
+    if (!this.placedStickersContainer) return;
+    this.placedStickersContainer.innerHTML = '';
+
     const words = wordRepository.getWords();
     const completedIds = this.getCompletedWordIds();
     const placements = this.getStickerPlacements();
 
-    this.placedStickersContainer.innerHTML = '';
-    this.drawerEl.innerHTML = '';
-
-    words.forEach((wordItem, idx) => {
+    words.forEach(wordItem => {
       const isUnlocked = completedIds.includes(wordItem.id);
-      const placement = placements[wordItem.id];
+      if (!isUnlocked) return;
 
-      if (isUnlocked && placement && placement.isPlaced) {
-        // Render on canvas
-        this.renderCanvasSticker(wordItem, placement.x, placement.y, placement.rotation || 0);
-      } else {
-        // Render in bottom drawer
-        const drawerCard = document.createElement('div');
-        drawerCard.className = `drawer-sticker-card ${isUnlocked ? 'is-unlocked' : 'is-locked'}`;
-        drawerCard.setAttribute('data-id', wordItem.id);
+      // Determine coordinate: saved custom placement OR default habitat slot coordinate
+      const defaultSlot = getSlotForWord(wordItem.id);
+      const saved = placements[wordItem.id];
+      const posX = saved && saved.x !== undefined ? saved.x : (defaultSlot ? defaultSlot.x : 200);
+      const posY = saved && saved.y !== undefined ? saved.y : (defaultSlot ? defaultSlot.y : 180);
+      const rot = saved && saved.rotation !== undefined ? saved.rotation : 0;
 
-        if (isUnlocked) {
-          drawerCard.setAttribute('title', `Sentuh untuk geser ${wordItem.word}`);
-          drawerCard.innerHTML = `
-            <div class="drawer-sticker-badge">
-              ${wordItem.image ? `<img src="${wordItem.image}" alt="${wordItem.word}">` : '🎨'}
-            </div>
-            <div class="drawer-sticker-name">${wordItem.word}</div>
-          `;
-          this.attachDrawerDrag(drawerCard, wordItem);
-        } else {
-          drawerCard.setAttribute('title', 'Selesaikan kata di game untuk membuka stiker ini!');
-          drawerCard.innerHTML = `
-            <div class="drawer-sticker-badge locked-badge">
-              <span class="locked-icon">🔒</span>
-            </div>
-            <div class="drawer-sticker-name">???</div>
-          `;
-        }
-
-        this.drawerEl.appendChild(drawerCard);
-      }
-    });
-
-    this.renderStrips();
-
-    if (this.drawerEl.children.length === 0) {
-      this.drawerEl.innerHTML = `
-        <div class="drawer-empty-hint">
-          ✨ Semua stiker koleksimu sudah ditempel di panorama! Keren sekali!
-        </div>
-      `;
-    }
-  }
-
-  renderStrips() {
-    const stripsContainer = document.getElementById('diorama-album-strips-layer');
-    if (!stripsContainer) return;
-    stripsContainer.innerHTML = '';
-    const placements = this.getStickerPlacements();
-
-    Object.keys(DIORAMA_SLOTS).forEach(wordId => {
-      const slot = DIORAMA_SLOTS[wordId];
-      const isFilled = placements[wordId] && placements[wordId].isPlaced;
-
-      const stripEl = document.createElement('div');
-      stripEl.className = `diorama-slot-strip ${isFilled ? 'is-filled-strip' : ''}`;
-      stripEl.setAttribute('data-word-id', wordId);
-      stripEl.style.left = `${slot.x}px`;
-      stripEl.style.top = `${slot.y}px`;
-      stripEl.innerHTML = `
-        <div class="strip-dashed-frame">
-          <span class="strip-icon">${slot.icon}</span>
-        </div>
-        <div class="strip-label-ribbon">${slot.word}</div>
-      `;
-      stripsContainer.appendChild(stripEl);
+      this.renderCanvasSticker(wordItem, posX, posY, rot);
     });
   }
 
@@ -270,28 +330,42 @@ export class StickerBook {
         ${wordItem.image ? `<img src="${wordItem.image}" alt="${wordItem.word}">` : '🎨'}
       </div>
       <div class="canvas-sticker-tag">${wordItem.word}</div>
-      <div class="canvas-sticker-remover" data-action="return-to-drawer" title="Kembalikan ke laci">✕</div>
     `;
 
     // Tap to interact (trigger sound & habitat reaction)
-    stickerEl.addEventListener('click', (e) => {
-      if (e.target.closest('.canvas-sticker-remover')) return;
+    stickerEl.addEventListener('click', () => {
       this.triggerStickerReaction(stickerEl, wordItem);
     });
 
-    // Make placed sticker draggable across canvas
+    // Make placed sticker draggable across canvas to reposition freely
     this.attachCanvasStickerDrag(stickerEl, wordItem);
 
     this.placedStickersContainer.appendChild(stickerEl);
   }
 
-  triggerStickerReaction(stickerEl, wordItem) {
-    audioEngine.playPeelStick();
-    stickerEl.classList.remove('jiggle-reaction');
-    void stickerEl.offsetWidth; // reflow
-    stickerEl.classList.add('jiggle-reaction');
+  focusWordInDiorama(wordId) {
+    const defaultSlot = getSlotForWord(wordId);
+    const placements = this.getStickerPlacements();
+    const saved = placements[wordId];
+    const targetX = saved && saved.x !== undefined ? saved.x : (defaultSlot ? defaultSlot.x : 0);
 
-    // Habitat unique reactions for all words
+    if (this.viewportEl) {
+      const viewWidth = this.viewportEl.clientWidth || 600;
+      const scrollPos = Math.max(0, targetX - viewWidth / 2);
+      this.viewportEl.scrollTo({ left: scrollPos, behavior: 'smooth' });
+
+      // Highlight the sticker with cheerful bounce
+      setTimeout(() => {
+        const el = this.placedStickersContainer.querySelector(`[data-id="${wordId}"]`);
+        if (el) {
+          const word = wordRepository.getWords().find(w => w.id === wordId);
+          if (word) this.triggerStickerReaction(el, word);
+        }
+      }, 350);
+    }
+  }
+
+  triggerSoundAndSpeech(wordItem) {
     const soundMap = {
       ikan: 'splash',
       mobil: 'vroom',
@@ -314,6 +388,16 @@ export class StickerBook {
 
     const soundType = soundMap[wordItem.id] || wordItem.vignette?.actionSound || 'twinkle';
     audioEngine.playVignetteSound(soundType);
+    audioEngine.speakWordSequence(wordItem);
+  }
+
+  triggerStickerReaction(stickerEl, wordItem) {
+    audioEngine.playPeelStick();
+    stickerEl.classList.remove('jiggle-reaction');
+    void stickerEl.offsetWidth; // trigger reflow
+    stickerEl.classList.add('jiggle-reaction');
+
+    this.triggerSoundAndSpeech(wordItem);
 
     if (wordItem.id === 'ikan') {
       this.spawnWaterBubbles(stickerEl);
@@ -322,9 +406,6 @@ export class StickerBook {
     } else if (wordItem.id === 'awan') {
       this.spawnCloudPuff(stickerEl);
     }
-
-    // Pronounce the word
-    audioEngine.speakWordSequence(wordItem);
   }
 
   spawnWaterBubbles(targetEl) {
@@ -396,140 +477,57 @@ export class StickerBook {
     }
   }
 
-  attachDrawerDrag(drawerCard, wordItem) {
-    drawerCard.style.touchAction = 'none';
-
-    drawerCard.addEventListener('pointerdown', (e) => {
-      if (e.button !== undefined && e.button !== 0) return;
-      e.preventDefault();
-
-      audioEngine.playPaperGrab();
-      const initialRot = (Math.random() - 0.5) * 14;
-
-      const ghost = document.createElement('div');
-      ghost.className = 'diorama-drag-ghost die-cut-sticker';
-      ghost.style.position = 'fixed';
-      ghost.style.left = `${e.clientX}px`;
-      ghost.style.top = `${e.clientY}px`;
-      ghost.style.transform = `translate(-50%, -50%) scale(1.15) rotate(${initialRot}deg)`;
-      ghost.style.zIndex = '99999';
-      ghost.style.pointerEvents = 'none';
-      ghost.innerHTML = `
-        <div class="canvas-sticker-art">
-          ${wordItem.image ? `<img src="${wordItem.image}" alt="${wordItem.word}">` : '🎨'}
-        </div>
-      `;
-      document.body.appendChild(ghost);
-      drawerCard.classList.add('is-being-dragged');
-
-      const onPointerMove = (moveEvt) => {
-        ghost.style.left = `${moveEvt.clientX}px`;
-        ghost.style.top = `${moveEvt.clientY}px`;
-      };
-
-      const onPointerUp = (upEvt) => {
-        window.removeEventListener('pointermove', onPointerMove);
-        window.removeEventListener('pointerup', onPointerUp);
-        window.removeEventListener('pointercancel', onPointerUp);
-        ghost.remove();
-        drawerCard.classList.remove('is-being-dragged');
-
-        // Check if dropped inside diorama viewport
-        const viewportRect = this.viewportEl.getBoundingClientRect();
-        if (
-          upEvt.clientX >= viewportRect.left &&
-          upEvt.clientX <= viewportRect.right &&
-          upEvt.clientY >= viewportRect.top &&
-          upEvt.clientY <= viewportRect.bottom
-        ) {
-          const canvasRect = this.canvasEl.getBoundingClientRect();
-          let targetX = Math.round(upEvt.clientX - canvasRect.left);
-          let targetY = Math.round(upEvt.clientY - canvasRect.top);
-          let finalRot = initialRot;
-
-          // Magnetic snap to designated slot if dropped nearby (< 85px)
-          const slot = getSlotForWord(wordItem.id);
-          if (slot && Math.hypot(targetX - slot.x, targetY - slot.y) < 85) {
-            targetX = slot.x;
-            targetY = slot.y;
-            finalRot = 0;
-          }
-
-          audioEngine.playPeelStick();
-          this.saveStickerPlacement(wordItem.id, targetX, targetY, finalRot);
-          this.renderStickers();
-        } else {
-          audioEngine.playPaperLand();
-        }
-      };
-
-      window.addEventListener('pointermove', onPointerMove);
-      window.addEventListener('pointerup', onPointerUp);
-      window.addEventListener('pointercancel', onPointerUp);
-    });
-  }
-
   attachCanvasStickerDrag(stickerEl, wordItem) {
     stickerEl.style.touchAction = 'none';
 
-    stickerEl.addEventListener('pointerdown', (e) => {
-      if (e.target.closest('.canvas-sticker-remover')) return;
-      if (e.button !== undefined && e.button !== 0) return;
-      e.preventDefault();
+    let isMoving = false;
+    let startX = 0;
+    let startY = 0;
+    let initialLeft = 0;
+    let initialTop = 0;
 
-      let isMoving = false;
-      const startX = e.clientX;
-      const startY = e.clientY;
-      const origLeft = parseFloat(stickerEl.style.left);
-      const origTop = parseFloat(stickerEl.style.top);
-      const rot = (Math.random() - 0.5) * 12;
+    stickerEl.addEventListener('pointerdown', (e) => {
+      e.stopPropagation();
+      audioEngine.ensureContext();
+      audioEngine.playPaperGrab();
+
+      isMoving = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      initialLeft = parseFloat(stickerEl.style.left);
+      initialTop = parseFloat(stickerEl.style.top);
+
+      stickerEl.classList.add('is-dragging-on-canvas');
+      stickerEl.setPointerCapture(e.pointerId);
 
       const onPointerMove = (moveEvt) => {
+        if (!isMoving) return;
         const dx = moveEvt.clientX - startX;
         const dy = moveEvt.clientY - startY;
 
-        if (!isMoving && Math.hypot(dx, dy) > 8) {
-          isMoving = true;
-          audioEngine.playPaperGrab();
-          stickerEl.classList.add('is-dragging-on-canvas');
-        }
+        const newX = Math.max(45, Math.min(2155, initialLeft + dx));
+        const newY = Math.max(45, Math.min(335, initialTop + dy));
 
-        if (isMoving) {
-          const newX = Math.max(40, Math.min(2160, origLeft + dx));
-          const newY = Math.max(40, Math.min(380, origTop + dy));
-          stickerEl.style.left = `${newX}px`;
-          stickerEl.style.top = `${newY}px`;
-          stickerEl.style.transform = `translate(-50%, -50%) scale(1.15) rotate(${rot}deg)`;
-        }
+        stickerEl.style.left = `${newX}px`;
+        stickerEl.style.top = `${newY}px`;
+        stickerEl.style.transform = `translate(-50%, -50%) scale(1.12) rotate(0deg)`;
       };
 
-      const onPointerUp = (upEvt) => {
+      const onPointerUp = () => {
+        if (!isMoving) return;
+        isMoving = false;
+        try { stickerEl.releasePointerCapture(e.pointerId); } catch (_) {}
+        stickerEl.classList.remove('is-dragging-on-canvas');
+        audioEngine.playPeelStick();
+
+        const finalX = parseFloat(stickerEl.style.left);
+        const finalY = parseFloat(stickerEl.style.top);
+        this.saveStickerPlacement(wordItem.id, finalX, finalY, 0);
+
+        stickerEl.style.transform = `translate(-50%, -50%) scale(1) rotate(0deg)`;
         window.removeEventListener('pointermove', onPointerMove);
         window.removeEventListener('pointerup', onPointerUp);
         window.removeEventListener('pointercancel', onPointerUp);
-
-        if (isMoving) {
-          stickerEl.classList.remove('is-dragging-on-canvas');
-          audioEngine.playPeelStick();
-
-          let finalX = parseFloat(stickerEl.style.left);
-          let finalY = parseFloat(stickerEl.style.top);
-          let finalRot = rot;
-
-          // Magnetic snap to designated slot if dropped nearby (< 85px)
-          const slot = getSlotForWord(wordItem.id);
-          if (slot && Math.hypot(finalX - slot.x, finalY - slot.y) < 85) {
-            finalX = slot.x;
-            finalY = slot.y;
-            finalRot = 0;
-          }
-
-          this.saveStickerPlacement(wordItem.id, finalX, finalY, finalRot);
-          stickerEl.style.left = `${finalX}px`;
-          stickerEl.style.top = `${finalY}px`;
-          stickerEl.style.transform = `translate(-50%, -50%) scale(1) rotate(${finalRot}deg)`;
-          this.renderStrips();
-        }
       };
 
       window.addEventListener('pointermove', onPointerMove);
@@ -538,13 +536,97 @@ export class StickerBook {
     });
   }
 
+  switchTab(tabName) {
+    this.activeTab = tabName;
+    const tabGalleryBtn = document.getElementById('tab-btn-gallery');
+    const tabDioramaBtn = document.getElementById('tab-btn-diorama');
+    const viewGallery = document.getElementById('album-view-gallery');
+    const viewDiorama = document.getElementById('album-view-diorama');
+
+    if (tabName === 'gallery') {
+      if (tabGalleryBtn) tabGalleryBtn.classList.add('active');
+      if (tabDioramaBtn) tabDioramaBtn.classList.remove('active');
+      if (viewGallery) { viewGallery.classList.remove('hidden-view'); viewGallery.classList.add('active-view'); }
+      if (viewDiorama) { viewDiorama.classList.add('hidden-view'); viewDiorama.classList.remove('active-view'); }
+      this.renderGalleryGrid();
+    } else {
+      if (tabGalleryBtn) tabGalleryBtn.classList.remove('active');
+      if (tabDioramaBtn) tabDioramaBtn.classList.add('active');
+      if (viewGallery) { viewGallery.classList.add('hidden-view'); viewGallery.classList.remove('active-view'); }
+      if (viewDiorama) { viewDiorama.classList.remove('hidden-view'); viewDiorama.classList.add('active-view'); }
+      this.renderDioramaCanvas();
+    }
+  }
+
   bindEvents() {
-    // Left & Right slide buttons
+    // Tab switching
+    const tabGalleryBtn = document.getElementById('tab-btn-gallery');
+    const tabDioramaBtn = document.getElementById('tab-btn-diorama');
+
+    if (tabGalleryBtn) {
+      tabGalleryBtn.addEventListener('click', () => {
+        audioEngine.playPaperGrab();
+        this.switchTab('gallery');
+      });
+    }
+
+    if (tabDioramaBtn) {
+      tabDioramaBtn.addEventListener('click', () => {
+        audioEngine.playPaperGrab();
+        this.switchTab('diorama');
+      });
+    }
+
+    // Category filter pills in Gallery
+    const filterBtns = this.containerEl.querySelectorAll('.btn-filter-pill');
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        audioEngine.playPaperGrab();
+        this.activeCategoryFilter = btn.getAttribute('data-cat') || 'all';
+        filterBtns.forEach(b => b.classList.toggle('active', b === btn));
+        this.renderGalleryGrid();
+      });
+    });
+
+    // Close button
+    const closeBtn = document.getElementById('btn-close-stickers');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        audioEngine.playPaperGrab();
+        this.hide();
+      });
+    }
+
+    // Reset Diorama Placements button
+    const resetBtn = document.getElementById('btn-reset-diorama');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        if (confirm('Kembalikan semua stiker diorama ke posisi habitat aslinya?')) {
+          audioEngine.playPaperGrab();
+          this.resetAllPlacements();
+          this.renderDioramaCanvas();
+        }
+      });
+    }
+
+    // Zone Jump navigation buttons in Diorama
+    const zoneBtns = this.containerEl.querySelectorAll('.btn-zone-jump');
+    zoneBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetX = parseInt(btn.getAttribute('data-target-x'), 10) || 0;
+        audioEngine.playPaperGrab();
+        if (this.viewportEl) {
+          this.viewportEl.scrollTo({ left: targetX, behavior: 'smooth' });
+        }
+      });
+    });
+
+    // Slide buttons
     const prevBtn = document.getElementById('btn-album-slide-prev');
     const nextBtn = document.getElementById('btn-album-slide-next');
     if (prevBtn) {
       prevBtn.addEventListener('click', () => {
-        audioEngine.playGrab();
+        audioEngine.playPaperGrab();
         if (this.viewportEl) {
           this.viewportEl.scrollBy({ left: -450, behavior: 'smooth' });
         }
@@ -552,63 +634,14 @@ export class StickerBook {
     }
     if (nextBtn) {
       nextBtn.addEventListener('click', () => {
-        audioEngine.playGrab();
+        audioEngine.playPaperGrab();
         if (this.viewportEl) {
           this.viewportEl.scrollBy({ left: 450, behavior: 'smooth' });
         }
       });
     }
 
-    // Close button
-    const closeBtn = document.getElementById('btn-close-stickers');
-    if (closeBtn) {
-      closeBtn.addEventListener('click', () => {
-        audioEngine.playGrab();
-        this.hide();
-      });
-    }
-
-    // Reset All Placements button
-    const resetBtn = document.getElementById('btn-reset-diorama');
-    if (resetBtn) {
-      resetBtn.addEventListener('click', () => {
-        if (confirm('Kembalikan semua stiker ke laci bawah untuk ditata ulang?')) {
-          audioEngine.playPaperGrab();
-          this.resetAllPlacements();
-          this.renderStickers();
-        }
-      });
-    }
-
-    // Zone Jump navigation buttons
-    const zoneBtns = this.containerEl.querySelectorAll('.btn-zone-jump');
-    zoneBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const targetX = parseInt(btn.getAttribute('data-target-x'), 10) || 0;
-        audioEngine.playGrab();
-        if (this.viewportEl) {
-          this.viewportEl.scrollTo({ left: targetX, behavior: 'smooth' });
-        }
-      });
-    });
-
-    // Delegation for returning sticker to drawer via ✕ button
-    if (this.placedStickersContainer) {
-      this.placedStickersContainer.addEventListener('click', (e) => {
-        const remover = e.target.closest('.canvas-sticker-remover');
-        if (!remover) return;
-
-        const stickerCard = remover.closest('.canvas-placed-sticker');
-        if (!stickerCard) return;
-
-        const id = stickerCard.getAttribute('data-id');
-        audioEngine.playPaperLand();
-        this.removeStickerPlacement(id);
-        this.renderStickers();
-      });
-    }
-
-    // Drag-to-scroll viewport on empty canvas
+    // Setup viewport drag scroll on diorama
     this.setupViewportDragScroll();
   }
 
@@ -631,7 +664,7 @@ export class StickerBook {
       if (!isDown) return;
       e.preventDefault();
       const x = e.pageX - this.viewportEl.offsetLeft;
-      const walk = (x - startX) * 1.4; // Scroll multiplier
+      const walk = (x - startX) * 1.3;
       this.viewportEl.scrollLeft = scrollLeft - walk;
     };
 

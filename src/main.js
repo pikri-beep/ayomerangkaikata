@@ -83,7 +83,17 @@ class MonsterPhonicsApp {
 
   initEngines() {
     this.stickerBook = new StickerBook({
-      containerEl: this.stickerBookContainerEl
+      containerEl: this.stickerBookContainerEl,
+      onPlayWord: (wordItem) => {
+        const words = wordRepository.getWords();
+        const targetIndex = words.findIndex(w => w.id === wordItem.id);
+        if (targetIndex !== -1) {
+          if (this.mainMenuScreen) {
+            this.mainMenuScreen.classList.add('hidden');
+          }
+          this.loadWord(targetIndex);
+        }
+      }
     });
 
     this.dragDropEngine = new DragDropEngine({
@@ -96,7 +106,7 @@ class MonsterPhonicsApp {
       containerEl: this.theaterContainerEl,
       stickerBook: this.stickerBook,
       onNextWord: () => this.nextWord(),
-      onOpenStickerBook: () => this.stickerBook.show(),
+      onOpenStickerBook: () => this.stickerBook.show('diorama', this.currentWordData?.id),
       onSaveSticker: (id) => {
         this.stickerBook.saveCompletedWord(id);
         this.updateMenuStats();
