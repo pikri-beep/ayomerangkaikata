@@ -853,7 +853,11 @@ body::after {
    PANORAMIC PAPERCRAFT DIORAMA ALBUM
    ========================================================== */
 
-.diorama-backdrop {
+/* ==========================================================
+   STICKER ALBUM BOOK (AUTHENTIC 3D BOOK-OPENING EXPERIENCE)
+   ========================================================== */
+
+.sticker-book-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(40, 42, 58, 0.78);
@@ -866,41 +870,112 @@ body::after {
 
 @supports (backdrop-filter: blur(4px)) {
   @media (min-width: 768px) {
-    .diorama-backdrop {
+    .sticker-book-backdrop {
       backdrop-filter: blur(4px);
     }
   }
 }
 
-/* ==========================================================
-   STICKER BOOK & DIORAMA ALBUM MODAL (DUAL-TAB EXPERIENCE)
-   ========================================================== */
+/* 3D Book Stage for Book-Opening Animation */
+.sticker-book-stage {
+  perspective: 1200px;
+  width: 95vw;
+  max-width: 1060px;
+  height: 90vh;
+  max-height: 760px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-.diorama-modal-window.album-window {
+.sticker-book-open-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+.sticker-book-open-wrapper.animate-book-open {
+  animation: bookSpreadOpen 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes bookSpreadOpen {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 30px, 0) scale(0.9) rotateX(10deg);
+  }
+  65% {
+    opacity: 1;
+    transform: translate3d(0, -4px, 0) scale(1.01) rotateX(-2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1) rotateX(0deg);
+  }
+}
+
+/* Book Spine Binding Decoration */
+.book-spine-binding {
+  width: 30px;
+  background: #E5DEC9;
+  border: 3px solid var(--color-marker);
+  border-right: none;
+  border-radius: 18px 0 0 18px;
+  box-shadow: -4px 6px 0 var(--color-marker);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  padding: 2rem 0;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.spine-stitch {
+  width: 16px;
+  height: 6px;
+  background: #B8AA93;
+  border: 1.5px solid var(--color-marker);
+  border-radius: 4px;
+}
+
+/* Main Album Sheet Body */
+.sticker-book-sheet {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
   background: #FAF8F2;
   border: 3.5px solid var(--color-marker);
-  border-radius: 22px;
-  box-shadow: 0 8px 0 var(--color-marker);
-  width: 95vw;
-  max-width: 1150px;
-  height: 90vh;
-  max-height: 780px;
+  border-radius: 0 20px 20px 0;
+  box-shadow: 6px 8px 0 var(--color-marker);
   display: flex;
   flex-direction: column;
   overflow: hidden;
   position: relative;
 }
 
-.album-header {
+@media (max-width: 600px) {
+  .book-spine-binding {
+    display: none;
+  }
+  .sticker-book-sheet {
+    border-radius: 18px;
+    box-shadow: 0 6px 0 var(--color-marker);
+  }
+}
+
+/* Album Book Header */
+.album-book-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.85rem 1.4rem;
+  padding: 0.85rem 1.3rem;
   background: #FFFFFF;
   border-bottom: 3px solid var(--color-marker);
-  flex-wrap: wrap;
   gap: 0.75rem;
-  z-index: 20;
+  flex-wrap: wrap;
+  z-index: 10;
 }
 
 .album-brand-section {
@@ -937,89 +1012,25 @@ body::after {
   color: #7A5EA7;
 }
 
-/* Big, Friendly Dual Tab Selector */
-.album-tab-bar {
-  display: flex;
-  align-items: center;
-  background: #F1F5F9;
-  border: 2.5px solid var(--color-marker);
-  border-radius: 14px;
-  padding: 3px;
-  gap: 4px;
-}
-
-.btn-album-tab {
-  font-family: var(--font-heading);
-  font-size: 1.05rem;
-  font-weight: 700;
-  padding: 0.45rem 1.15rem;
-  border-radius: 10px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: #64748B;
-  transition: all 0.15s ease;
+/* Category Filter Bar */
+.album-filter-pills {
   display: flex;
   align-items: center;
   gap: 0.45rem;
-}
-
-.btn-album-tab.active {
-  background: #FFFFFF;
-  color: var(--text-dark);
-  border: 2px solid var(--color-marker);
-  box-shadow: 0 2px 0 var(--color-marker);
-}
-
-.btn-album-close {
-  width: 40px;
-  height: 40px;
-  font-size: 1.15rem;
-  border-radius: 12px;
-}
-
-/* Tab Views Container */
-.album-tab-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  position: relative;
-}
-
-.album-tab-content.hidden-view {
-  display: none !important;
-}
-
-.album-tab-content.active-view {
-  display: flex !important;
-}
-
-/* ==========================================================
-   TAB 1: STICKER BOOK GALLERY GRID VIEW
-   ========================================================== */
-
-.gallery-filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.4rem;
-  background: #FFFFFF;
-  border-bottom: 2px solid #E2E8F0;
   overflow-x: auto;
-  flex-wrap: nowrap;
   scrollbar-width: none;
+  flex-wrap: nowrap;
 }
 
-.gallery-filter-bar::-webkit-scrollbar {
+.album-filter-pills::-webkit-scrollbar {
   display: none;
 }
 
 .btn-filter-pill {
   font-family: var(--font-heading);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 700;
-  padding: 0.35rem 0.85rem;
+  padding: 0.35rem 0.8rem;
   background: #F8FAFC;
   border: 2px solid #CBD5E1;
   border-radius: 20px;
@@ -1042,51 +1053,69 @@ body::after {
   box-shadow: 0 2px 0 var(--color-marker);
 }
 
+.btn-album-close {
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 800;
+  padding: 0.4rem 0.9rem;
+  background: #FFF0F0;
+  border: 2px solid #E63946;
+  color: #E63946;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.btn-album-close:hover {
+  background: #FFE5E5;
+  transform: translateY(-1px);
+}
+
+/* Sticker Cards Grid Sheet */
 .sticker-cards-grid {
   flex: 1;
   overflow-y: auto;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1.1rem;
-  padding: 1.25rem 1.4rem;
+  grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+  gap: 1rem;
+  padding: 1.2rem;
   align-content: start;
   background: #FAF8F2;
 }
 
 .gallery-sticker-card {
   content-visibility: auto;
-  contain-intrinsic-size: 200px 240px;
+  contain-intrinsic-size: 185px 230px;
   contain: layout style paint;
   background: #FFFFFF;
-  border: 3px solid var(--color-marker);
-  border-radius: 18px;
+  border: 2.5px solid var(--color-marker);
+  border-radius: 16px;
   box-shadow: 0 4px 0 var(--color-marker);
-  padding: 1.1rem 0.9rem;
+  padding: 0.9rem 0.75rem;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   position: relative;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.12s ease;
 }
 
 .gallery-sticker-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 7px 0 var(--color-marker);
+  transform: translateY(-2px);
 }
 
 .card-status-badge {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 8px;
+  right: 8px;
   font-family: var(--font-heading);
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 800;
   background: #E8FFF8;
   color: #059669;
   border: 1.5px solid #059669;
-  border-radius: 10px;
-  padding: 2px 8px;
+  border-radius: 8px;
+  padding: 2px 6px;
 }
 
 .card-status-badge.locked-status {
@@ -1096,9 +1125,9 @@ body::after {
 }
 
 .card-sticker-illustration {
-  width: 90px;
-  height: 90px;
-  margin: 0.5rem 0 0.4rem;
+  width: 84px;
+  height: 84px;
+  margin: 0.4rem 0 0.35rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1113,22 +1142,22 @@ body::after {
 
 .silhouette-box {
   background: #F1F5F9;
-  border: 2.5px dashed #CBD5E1;
-  border-radius: 16px;
+  border: 2px dashed #CBD5E1;
+  border-radius: 14px;
 }
 
 .locked-big-icon {
-  font-size: 2.4rem;
+  font-size: 2.2rem;
   opacity: 0.4;
 }
 
 .card-word-title {
   font-family: var(--font-heading);
-  font-size: 1.35rem;
+  font-size: 1.3rem;
   font-weight: 800;
   color: var(--text-dark);
   letter-spacing: 0.5px;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.15rem;
 }
 
 .card-word-title.locked-title {
@@ -1137,19 +1166,19 @@ body::after {
 
 .card-category-tag {
   font-family: var(--font-primary);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: #64748B;
   background: #F8FAFC;
-  border-radius: 8px;
-  padding: 2px 8px;
-  margin-bottom: 0.75rem;
+  border-radius: 6px;
+  padding: 2px 7px;
+  margin-bottom: 0.65rem;
 }
 
 .card-hint-text {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: #64748B;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.65rem;
   line-height: 1.25;
 }
 
@@ -1165,35 +1194,24 @@ body::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.3rem;
+  gap: 0.25rem;
   font-family: var(--font-heading);
   font-size: 0.88rem;
   font-weight: 700;
-  padding: 0.45rem 0.2rem;
+  padding: 0.4rem 0.2rem;
   border: 2px solid var(--color-marker);
   border-radius: 10px;
   cursor: pointer;
   box-shadow: 0 2px 0 var(--color-marker);
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  transition: transform 0.1s ease;
 }
 
 .btn-card-action:hover {
   transform: translateY(-1px);
-  box-shadow: 0 3px 0 var(--color-marker);
-}
-
-.btn-card-action:active {
-  transform: translateY(1px);
-  box-shadow: none;
 }
 
 .btn-card-sound {
   background: #FFF3B0;
-  color: var(--text-dark);
-}
-
-.btn-card-diorama {
-  background: #A0E7E5;
   color: var(--text-dark);
 }
 
@@ -1206,93 +1224,19 @@ body::after {
   width: 100%;
   background: #E0E7FF;
   color: #3730A3;
-  padding: 0.6rem;
-  font-size: 1rem;
-}
-
-/* ==========================================================
-   TAB 2: DIORAMA STAGE WORLD VIEW
-   ========================================================== */
-
-.diorama-zone-ribbon {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 1.2rem;
-  background: #FFFFFF;
-  border-bottom: 2.5px solid var(--color-marker);
-  overflow-x: auto;
-  flex-wrap: nowrap;
-  scrollbar-width: none;
-  z-index: 10;
-}
-
-.zone-ribbon-label {
-  font-family: var(--font-heading);
+  padding: 0.55rem;
   font-size: 0.95rem;
-  font-weight: 700;
-  color: #64748B;
-  margin-right: 0.3rem;
-  white-space: nowrap;
 }
 
-.btn-zone-jump {
-  font-family: var(--font-heading);
-  font-size: 0.9rem;
-  font-weight: 700;
-  padding: 0.4rem 0.85rem;
-  background: #FAF8F2;
-  border: 2px solid var(--color-marker);
-  border-radius: 12px;
-  cursor: pointer;
-  box-shadow: 0 2px 0 var(--color-marker);
-  transition: transform 0.1s ease;
-  white-space: nowrap;
-}
-
-.btn-zone-jump:hover {
-  transform: translateY(-2px);
-  background: #FFF;
-}
-
-.btn-zone-jump:active {
-  transform: translateY(1px);
-  box-shadow: none;
-}
-
-.btn-reset-diorama {
-  margin-left: auto;
+/* Album Book Footer */
+.album-book-footer {
+  padding: 0.45rem 1rem;
+  background: #FFF9DB;
+  border-top: 2px solid var(--color-marker);
   font-family: var(--font-heading);
   font-size: 0.88rem;
   font-weight: 700;
-  padding: 0.4rem 0.75rem;
-  background: #FFF0F0;
-  border: 2px solid #E63946;
-  border-radius: 12px;
-  color: #E63946;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.diorama-stage-wrapper {
-  flex: 1;
-  min-height: 0;
-  position: relative;
-  overflow: hidden;
-}
-
-.diorama-bottom-hint {
-  padding: 0.6rem 1.2rem;
-  background: #FFF9DB;
-  border-top: 2.5px solid var(--color-marker);
-  font-family: var(--font-heading);
-  font-size: 1rem;
-  font-weight: 700;
   color: var(--text-dark);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  justify-content: center;
   text-align: center;
 }
 

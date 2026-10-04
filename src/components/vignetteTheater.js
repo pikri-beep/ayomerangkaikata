@@ -177,8 +177,8 @@ export class VignetteTheater {
                   <span>Lanjut Kata Berikutnya</span>
                   <span class="btn-arrow">➔</span>
                 </button>
-                <button type="button" class="btn-paper btn-peel-album" id="btn-peel-album" title="Buka seluruh album panorama">
-                  <span>🗺️ Lihat Album Penuh</span>
+                <button type="button" class="btn-paper btn-peel-album" id="btn-peel-album" title="Buka buku album stiker">
+                  <span>📖 Buka Buku Album</span>
                 </button>
               </div>
             </div>
@@ -217,6 +217,7 @@ export class VignetteTheater {
   }
 
   _cleanup() {
+    audioEngine.stopAllSpeech();
     // Kill flying ghosts from previous show
     if (this._activeGhostEl) {
       this._activeGhostEl.remove();

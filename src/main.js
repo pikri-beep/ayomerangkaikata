@@ -106,7 +106,7 @@ class MonsterPhonicsApp {
       containerEl: this.theaterContainerEl,
       stickerBook: this.stickerBook,
       onNextWord: () => this.nextWord(),
-      onOpenStickerBook: () => this.stickerBook.show('diorama', this.currentWordData?.id),
+      onOpenStickerBook: () => this.stickerBook.show(),
       onSaveSticker: (id) => {
         this.stickerBook.saveCompletedWord(id);
         this.updateMenuStats();
@@ -378,6 +378,7 @@ class MonsterPhonicsApp {
   }
 
   loadWord(index) {
+    audioEngine.stopAllSpeech();
     const words = wordRepository.getWords();
     if (!words || words.length === 0) return;
     if (index < 0) index = words.length - 1;
@@ -446,10 +447,12 @@ class MonsterPhonicsApp {
   }
 
   nextWord() {
+    audioEngine.stopAllSpeech();
     this.loadWord(this.currentWordIndex + 1);
   }
 
   prevWord() {
+    audioEngine.stopAllSpeech();
     this.loadWord(this.currentWordIndex - 1);
   }
 

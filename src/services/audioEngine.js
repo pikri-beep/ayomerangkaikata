@@ -51,6 +51,17 @@ class AudioEngine {
     }
   }
 
+  stopAllSpeech() {
+    this._speakGeneration++; // Invalidate any pending timeouts or chained utterances
+    this.isPlayingWordNarration = false;
+    this.stopCurrentPlayingAudio();
+    if (this.speechSynth) {
+      try {
+        this.speechSynth.cancel();
+      } catch (e) {}
+    }
+  }
+
   mute() {
     this.isMuted = true;
     if (this._bgmTimer) {
@@ -58,8 +69,7 @@ class AudioEngine {
       this._bgmTimer = null;
     }
     this.stopPhonicsChant();
-    this.stopCurrentPlayingAudio();
-    if (this.speechSynth) this.speechSynth.cancel();
+    this.stopAllSpeech();
   }
 
   unmute() {
