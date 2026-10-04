@@ -5,6 +5,7 @@ import { audioStorage } from './services/audioStorage.js';
 import { VoiceRecorder } from './services/voiceRecorder.js';
 import { LETTER_PHONICS_MAP } from './data/words.js';
 import { parentalLock } from './services/parentalLock.js';
+import { getSlotForWord, saveCustomDioramaSlot } from './data/dioramaSlots.js';
 
 class AdminApp {
   constructor() {
@@ -78,6 +79,7 @@ class AdminApp {
     this.editWordId = document.getElementById('edit-word-id');
     this.editWordName = document.getElementById('edit-word-name');
     this.editWordCategory = document.getElementById('edit-word-category');
+    this.editWordZone = document.getElementById('edit-word-zone');
     this.editWordHint = document.getElementById('edit-word-hint');
     this.editWordMeaning = document.getElementById('edit-word-meaning');
     this.editWordImage = document.getElementById('edit-word-image');
@@ -621,9 +623,16 @@ class AdminApp {
       this.editWordHint.value = word.hint || '';
       this.editWordMeaning.value = word.meaning || '';
       this.editWordImage.value = word.image || '';
+      const slot = getSlotForWord(word.id);
+      if (this.editWordZone && slot) {
+        this.editWordZone.value = slot.zone || 'taman';
+      }
     } else {
       this.wordEditorTitle.textContent = '➕ Tambah Kata Baru';
       this.editWordId.value = '';
+      if (this.editWordZone) {
+        this.editWordZone.value = 'taman';
+      }
     }
 
     this.modalWordEditor.classList.remove('hidden');
@@ -651,6 +660,27 @@ class AdminApp {
       meaning: this.editWordMeaning.value.trim() || `${wordName} adalah kata yang menarik!`,
       image: this.editWordImage.value.trim() || ''
     };
+
+    // Allocate diorama slot in the chosen habitat zone
+    const zone = this.editWordZone ? this.editWordZone.value : 'taman';
+    const zoneOffsets = {
+      taman: { x: 180 + Math.floor(Math.random() * 320), y: 185 + Math.floor(Math.random() * 30), hint: 'Di taman bunga ceria' },
+      sungai: { x: 620 + Math.floor(Math.random() * 420), y: 195 + Math.floor(Math.random() * 35), hint: 'Di tepi danau & sungai' },
+      kota: { x: 1180 + Math.floor(Math.random() * 420), y: 195 + Math.floor(Math.random() * 30), hint: 'Di jalanan kota ceria' },
+      langit: { x: 1720 + Math.floor(Math.random() * 380), y: 95 + Math.floor(Math.random() * 50), hint: 'Melayang di langit bintang' }
+    };
+    const zoneInfo = zoneOffsets[zone] || zoneOffsets.taman;
+    const existingSlot = getSlotForWord(id);
+    const slotData = {
+      id,
+      word: wordName,
+      icon: '⭐',
+      zone,
+      x: existingSlot && existingSlot.zone === zone ? existingSlot.x : zoneInfo.x,
+      y: existingSlot && existingSlot.zone === zone ? existingSlot.y : zoneInfo.y,
+      hint: zoneInfo.hint
+    };
+    saveCustomDioramaSlot(id, slotData);
 
     await wordRepository.saveWord(wordData);
     this.closeWordEditor();

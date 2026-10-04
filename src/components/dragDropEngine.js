@@ -1,5 +1,5 @@
 // Drag and Drop Engine for Monster Phonics
-// Full Pointer Events support (Mouse, Touch, Stylus)
+// Full Pointer Events support (Mouse, Touch, Stylus) + Keyboard & Tap-to-Place
 // Provides real-time phonics sound looping, bouncy physics, and snapping feedback
 
 import { audioEngine } from '../services/audioEngine.js';
@@ -26,8 +26,25 @@ export class DragDropEngine {
   }
 
   setTargetSlots(slots) {
+    if (this.dragGhost) {
+      this.dragGhost.remove();
+      this.dragGhost = null;
+    }
+    this.isDragging = false;
     this.targetSlots = slots;
     this._wordCompletionPending = false;
+
+    // Attach click-to-unseat listener on each target slot
+    this.targetSlots.forEach(slot => {
+      if (slot.el) {
+        slot.el.style.cursor = 'pointer';
+        slot.el.addEventListener('click', () => {
+          if (slot.isFilled && !this._wordCompletionPending) {
+            this.unseatSlot(slot);
+          }
+        });
+      }
+    });
   }
 
   /**
@@ -79,8 +96,58 @@ export class DragDropEngine {
     });
   }
 
+  /**
+   * Tidies all letters neatly on the play desk in an orderly row/grid
+   */
+  tidyLetters() {
+    if (!this.trayEl) return;
+    const cards = Array.from(this.trayEl.querySelectorAll('.monster-letter-card:not(.is-placed)'));
+    if (cards.length === 0) return;
+
+    audioEngine.playPaperGrab();
+
+    const rect = this.trayEl.getBoundingClientRect();
+    const deskW = rect.width > 0 ? rect.width : (this.trayEl.clientWidth || 360);
+    const deskH = rect.height > 0 ? rect.height : (this.trayEl.clientHeight || 280);
+
+    const cardW = Math.min(80, Math.max(56, deskW * 0.16));
+    const cardH = cardW * 1.15;
+    const pad = 14;
+
+    const n = cards.length;
+    const cols = Math.max(1, Math.min(n, Math.floor((deskW - pad * 2) / (cardW + 10))));
+    const rows = Math.ceil(n / cols);
+
+    const cellW = (deskW - pad * 2) / cols;
+    const cellH = Math.max(cardH + 8, (deskH - pad * 2) / rows);
+
+    cards.forEach((card, idx) => {
+      const col = idx % cols;
+      const row = Math.floor(idx / cols);
+
+      const posX = pad + col * cellW + (cellW - cardW) / 2;
+      const posY = pad + row * cellH + (cellH - cardH) / 2;
+
+      card.style.transition = 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)';
+      card.style.position = 'absolute';
+      card.style.left = `${posX}px`;
+      card.style.top = `${posY}px`;
+      card.style.transform = 'rotate(0deg) scale(1)';
+      card.style.zIndex = `${10 + idx}`;
+      card.style.visibility = 'visible';
+
+      setTimeout(() => {
+        card.style.transition = '';
+      }, 350);
+    });
+  }
+
   attachMonster(monsterEl, letter) {
     monsterEl.style.touchAction = 'none'; // Prevent scroll while dragging
+
+    let downTime = 0;
+    let downX = 0;
+    let downY = 0;
 
     const onPointerDown = (e) => {
       // Only single touch / primary mouse button; not if already dragging something
@@ -88,6 +155,10 @@ export class DragDropEngine {
       // Don't pick up already placed cards
       if (monsterEl.classList.contains('is-placed')) return;
       e.preventDefault();
+
+      downTime = Date.now();
+      downX = e.clientX;
+      downY = e.clientY;
 
       // Audio context unlock & tactile paper grab
       audioEngine.ensureContext();
@@ -154,6 +225,18 @@ export class DragDropEngine {
         this.targetSlots.forEach(s => s.el.classList.remove('slot-hover-snap'));
 
         if (upEvt) {
+          const moveDist = Math.hypot(upEvt.clientX - downX, upEvt.clientY - downY);
+          const duration = Date.now() - downTime;
+
+          // TAP-TO-PLACE: If child just tapped (<12px movement, <380ms)
+          if (moveDist < 12 && duration < 380) {
+            const targetSlot = this.targetSlots.find(s => !s.isFilled && s.expectedLetter === letter);
+            if (targetSlot) {
+              this.snapCardToSlot(monsterEl, targetSlot, letter);
+              return;
+            }
+          }
+
           this.handleDrop(upEvt.clientX, upEvt.clientY, letter, monsterEl);
         } else {
           // Cancelled — restore card to tray
@@ -222,61 +305,113 @@ export class DragDropEngine {
     this.activeSlot = hoveredSlot;
   }
 
+  snapCardToSlot(monsterEl, targetSlot, letter) {
+    targetSlot.isFilled = true;
+    this.activeSlot = null;
+
+    const slotRect = targetSlot.el.getBoundingClientRect();
+    const targetX = slotRect.left + slotRect.width / 2;
+    const targetY = slotRect.top + slotRect.height / 2;
+
+    const ghost = this.dragGhost || this._createQuickGhost(monsterEl, letter);
+    this.dragGhost = null;
+
+    if (ghost) {
+      ghost.classList.remove('paper-drag-lifted', 'paper-lifted');
+      ghost.classList.add('paper-sticking');
+      ghost.style.transition = 'all 0.24s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+      ghost.style.left = `${targetX}px`;
+      ghost.style.top = `${targetY}px`;
+      ghost.style.transform = 'translate(-50%, -50%) scale(1) rotate(0deg)';
+
+      setTimeout(() => {
+        ghost.remove();
+        this._finalizeSlot(monsterEl, targetSlot, letter, targetX, targetY);
+      }, 240);
+    } else {
+      this._finalizeSlot(monsterEl, targetSlot, letter, targetX, targetY);
+    }
+  }
+
+  _createQuickGhost(monsterEl, letter) {
+    const rect = monsterEl.getBoundingClientRect();
+    const ghost = document.createElement('div');
+    ghost.className = 'monster-drag-ghost paper-sticking';
+    ghost.style.position = 'fixed';
+    ghost.style.left = `${rect.left + rect.width / 2}px`;
+    ghost.style.top = `${rect.top + rect.height / 2}px`;
+    ghost.style.width = '84px';
+    ghost.style.height = '84px';
+    ghost.style.pointerEvents = 'none';
+    ghost.style.zIndex = '9999';
+    ghost.innerHTML = createMonsterSVG(letter, { state: 'dragging' });
+    document.body.appendChild(ghost);
+    return ghost;
+  }
+
+  _finalizeSlot(monsterEl, targetSlot, letter, targetX, targetY) {
+    targetSlot.el.innerHTML = createMonsterSVG(letter, { state: 'snapped' });
+    targetSlot.el.classList.add('slot-filled', 'paper-stuck');
+    targetSlot.filledMonsterEl = monsterEl;
+
+    monsterEl.classList.add('is-placed');
+    monsterEl.classList.remove('is-being-dragged', 'paper-lifted');
+    monsterEl.style.visibility = 'hidden';
+
+    audioEngine.playTapeSnap();
+    this.spawnSparkleParticles(targetX, targetY);
+    this.checkWordCompletion();
+  }
+
+  unseatSlot(slot) {
+    if (!slot || !slot.isFilled) return;
+
+    slot.isFilled = false;
+    slot.el.innerHTML = `<span class="slot-placeholder">${slot.expectedLetter}</span>`;
+    slot.el.classList.remove('slot-filled', 'paper-stuck');
+
+    const monsterEl = slot.filledMonsterEl;
+    slot.filledMonsterEl = null;
+
+    if (monsterEl) {
+      monsterEl.classList.remove('is-placed');
+      monsterEl.style.visibility = 'visible';
+      audioEngine.playPaperLand();
+      this.scatterLetters();
+    }
+
+    this._wordCompletionPending = false;
+  }
+
+  unseatLastFilledSlot() {
+    for (let i = this.targetSlots.length - 1; i >= 0; i--) {
+      const slot = this.targetSlots[i];
+      if (slot.isFilled && !this._wordCompletionPending) {
+        this.unseatSlot(slot);
+        return;
+      }
+    }
+  }
+
+  placeLetterFromKey(letter) {
+    const char = letter.toUpperCase();
+    const targetSlot = this.targetSlots.find(s => !s.isFilled && s.expectedLetter === char);
+    if (!targetSlot) return;
+
+    if (!this.trayEl) return;
+    const cards = Array.from(this.trayEl.querySelectorAll('.monster-letter-card:not(.is-placed)'));
+    const monsterEl = cards.find(c => c.getAttribute('data-letter') === char);
+    if (!monsterEl) return;
+
+    this.snapCardToSlot(monsterEl, targetSlot, char);
+  }
+
   handleDrop(clientX, clientY, letter, monsterEl) {
     // Clear slot highlights
     this.targetSlots.forEach(s => s.el.classList.remove('slot-hover-snap'));
 
     if (this.activeSlot && !this.activeSlot.isFilled && this.activeSlot.expectedLetter === letter) {
-      // SUCCESSFUL SNAP! Stick paper to the target slot
-      const targetSlot = this.activeSlot;
-      this.activeSlot = null;
-      targetSlot.isFilled = true;
-
-      // Animate ghost straight into slot center - paper sticking down to surface
-      const slotRect = targetSlot.el.getBoundingClientRect();
-      const targetX = slotRect.left + slotRect.width / 2;
-      const targetY = slotRect.top + slotRect.height / 2;
-
-      if (this.dragGhost) {
-        this.dragGhost.classList.remove('paper-drag-lifted', 'paper-lifted');
-        this.dragGhost.classList.add('paper-sticking');
-        this.dragGhost.style.transition = 'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-        this.dragGhost.style.left = `${targetX}px`;
-        this.dragGhost.style.top = `${targetY}px`;
-        this.dragGhost.style.transform = 'translate(-50%, -50%) scale(1) rotate(0deg)';
-
-        const ghost = this.dragGhost;
-        setTimeout(() => {
-          ghost.remove();
-          if (this.dragGhost === ghost) this.dragGhost = null;
-
-          // Fill the slot with the happy snapped monster sticker
-          targetSlot.el.innerHTML = createMonsterSVG(letter, { state: 'snapped' });
-          targetSlot.el.classList.add('slot-filled', 'paper-stuck');
-          targetSlot.filledMonsterEl = monsterEl;
-
-          // Mark placed
-          monsterEl.classList.add('is-placed');
-          monsterEl.classList.remove('is-being-dragged', 'paper-lifted');
-          monsterEl.style.visibility = 'hidden';
-
-          // Snap tape audio + sparkle particles
-          audioEngine.playTapeSnap();
-          this.spawnSparkleParticles(targetX, targetY);
-
-          // Check if word is fully completed
-          this.checkWordCompletion();
-        }, 200);
-      } else {
-        // Ghost was already removed (edge case) — still complete the slot
-        targetSlot.el.innerHTML = createMonsterSVG(letter, { state: 'snapped' });
-        targetSlot.el.classList.add('slot-filled', 'paper-stuck');
-        monsterEl.classList.add('is-placed');
-        monsterEl.classList.remove('is-being-dragged', 'paper-lifted');
-        monsterEl.style.visibility = 'hidden';
-        audioEngine.playTapeSnap();
-        this.checkWordCompletion();
-      }
+      this.snapCardToSlot(monsterEl, this.activeSlot, letter);
     } else {
       // FREE DROP — letter lands where the child released it on the play table
       audioEngine.playPaperLand();

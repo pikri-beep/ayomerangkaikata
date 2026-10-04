@@ -533,7 +533,7 @@ export class VignetteTheater {
       // Check magnetic hover over target strip
       if (this.targetStripEl && this.canvasEl && this.viewportEl) {
         const canvasRect = this.canvasEl.getBoundingClientRect();
-        const curCanvasX = e.clientX - canvasRect.left + this.viewportEl.scrollLeft;
+        const curCanvasX = e.clientX - canvasRect.left;
         const curCanvasY = e.clientY - canvasRect.top;
         const distToTarget = Math.hypot(curCanvasX - this.targetSlot.x, curCanvasY - this.targetSlot.y);
 
@@ -655,8 +655,7 @@ export class VignetteTheater {
         return;
       }
       const canvasRect = this.canvasEl.getBoundingClientRect();
-      // Account for current scroll position of viewport
-      const targetScreenX = canvasRect.left + slotX - this.viewportEl.scrollLeft;
+      const targetScreenX = canvasRect.left + slotX;
       const targetScreenY = canvasRect.top + slotY;
 
       if (ghostEl) {

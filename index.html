@@ -6,6 +6,10 @@
   <title>Ayo Merangkai Kata - Belajar Mengeja Papercraft & Doodle</title>
   <meta name="description" content="Aplikasi edukasi interaktif merangkai kata dan ejaan fonik bertema papercraft doodle untuk anak-anak. Ceria, ramah anak, dan bermain di atas kertas gambar!">
 
+  <meta name="theme-color" content="#FAF6ED">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
   <!-- Google Fonts: Balsamiq Sans & Patrick Hand -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -50,7 +54,10 @@
       <div class="washi-tape" aria-hidden="true"></div>
 
       <div class="mission-top-bar">
-        <span class="mission-category" id="mission-category">🐱 Hewan</span>
+        <div class="mission-meta-left">
+          <span class="mission-category" id="mission-category">🐱 Hewan</span>
+          <span class="mission-progress-tag" id="mission-progress-tag">1 / 17 ⭐</span>
+        </div>
         <div class="word-navigator">
           <button class="nav-arrow-btn" id="btn-prev-word" aria-label="Kata Sebelumnya" title="Kata Sebelumnya">◀</button>
           <button class="nav-arrow-btn" id="btn-next-word-top" aria-label="Kata Berikutnya" title="Kata Berikutnya">▶</button>
@@ -72,7 +79,11 @@
     <!-- Monster Letters Play Desk (Free to Drag & Scattered Papercut Area) -->
     <section class="tray-wrapper" aria-label="Meja Bermain Huruf">
       <div class="tray-title-bar">
-        <span class="doodle-tray-hint">🖐️ Huruf berserakan di meja, geser bebas ke kotak di atas!</span>
+        <span class="doodle-tray-hint">🖐️ Huruf berserakan di meja, geser atau ketuk ke kotak di atas!</span>
+        <button class="btn-tidy-desk" id="btn-tidy-desk" title="Tata rapi huruf di meja" aria-label="Tata rapi huruf di meja">
+          <span>✨</span>
+          <span>Rapikan Meja</span>
+        </button>
       </div>
       <div class="monster-tray scatter-play-desk" id="monster-tray" role="region" aria-label="Meja Bermain Huruf Bebas">
         <!-- Dynamically injected scattered draggable monster letter elements -->

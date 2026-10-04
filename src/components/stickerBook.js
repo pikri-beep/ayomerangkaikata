@@ -291,22 +291,36 @@ export class StickerBook {
     void stickerEl.offsetWidth; // reflow
     stickerEl.classList.add('jiggle-reaction');
 
-    // Habitat unique reactions
+    // Habitat unique reactions for all words
+    const soundMap = {
+      ikan: 'splash',
+      mobil: 'vroom',
+      kucing: 'meow',
+      apel: 'crunch',
+      bola: 'bounce',
+      bebek: 'quack',
+      singa: 'roar',
+      buku: 'rustle',
+      bintang: 'twinkle',
+      roti: 'crunch',
+      topi: 'cheer',
+      awan: 'whoosh',
+      bunga: 'twinkle',
+      kelinci: 'bounce',
+      kereta: 'train',
+      kupu: 'flutter',
+      gajah: 'trumpet'
+    };
+
+    const soundType = soundMap[wordItem.id] || wordItem.vignette?.actionSound || 'twinkle';
+    audioEngine.playVignetteSound(soundType);
+
     if (wordItem.id === 'ikan') {
-      audioEngine.playVignetteSound('splash');
       this.spawnWaterBubbles(stickerEl);
-    } else if (wordItem.id === 'mobil') {
-      audioEngine.playVignetteSound('vroom');
-    } else if (wordItem.id === 'kucing') {
-      audioEngine.playVignetteSound('meow');
-    } else if (wordItem.id === 'apel') {
-      audioEngine.playVignetteSound('crunch');
-    } else if (wordItem.id === 'bola') {
-      audioEngine.playVignetteSound('bounce');
-    } else if (wordItem.id === 'bebek') {
-      audioEngine.playVignetteSound('quack');
-    } else if (wordItem.id === 'singa') {
-      audioEngine.playVignetteSound('roar');
+    } else if (wordItem.id === 'bintang' || wordItem.id === 'bunga' || wordItem.id === 'kupu') {
+      this.spawnSparkleShower(stickerEl);
+    } else if (wordItem.id === 'awan') {
+      this.spawnCloudPuff(stickerEl);
     }
 
     // Pronounce the word
@@ -314,6 +328,7 @@ export class StickerBook {
   }
 
   spawnWaterBubbles(targetEl) {
+    if (!this.canvasEl) return;
     const rect = targetEl.getBoundingClientRect();
     const canvasRect = this.canvasEl.getBoundingClientRect();
     const originX = rect.left - canvasRect.left + rect.width / 2;
@@ -328,6 +343,56 @@ export class StickerBook {
       this.canvasEl.appendChild(bubble);
 
       setTimeout(() => bubble.remove(), 1400);
+    }
+  }
+
+  spawnSparkleShower(targetEl) {
+    if (!this.canvasEl) return;
+    const rect = targetEl.getBoundingClientRect();
+    const canvasRect = this.canvasEl.getBoundingClientRect();
+    const originX = rect.left - canvasRect.left + rect.width / 2;
+    const originY = rect.top - canvasRect.top + rect.height / 2;
+
+    const stars = ['✨', '⭐', '🌟', '💫'];
+    for (let i = 0; i < 6; i++) {
+      const star = document.createElement('div');
+      star.className = 'diorama-sparkle-float';
+      star.textContent = stars[i % stars.length];
+      star.style.position = 'absolute';
+      star.style.left = `${originX + (Math.random() - 0.5) * 50}px`;
+      star.style.top = `${originY + (Math.random() - 0.5) * 40}px`;
+      star.style.fontSize = `${1.2 + Math.random() * 0.5}rem`;
+      star.style.pointerEvents = 'none';
+      star.style.zIndex = '60';
+      star.style.animation = 'sparkleFloatUp 1.2s ease-out forwards';
+      star.style.animationDelay = `${i * 0.08}s`;
+      this.canvasEl.appendChild(star);
+
+      setTimeout(() => star.remove(), 1400);
+    }
+  }
+
+  spawnCloudPuff(targetEl) {
+    if (!this.canvasEl) return;
+    const rect = targetEl.getBoundingClientRect();
+    const canvasRect = this.canvasEl.getBoundingClientRect();
+    const originX = rect.left - canvasRect.left + rect.width / 2;
+    const originY = rect.top - canvasRect.top + rect.height / 2;
+
+    for (let i = 0; i < 4; i++) {
+      const puff = document.createElement('div');
+      puff.textContent = '☁️';
+      puff.style.position = 'absolute';
+      puff.style.left = `${originX + (Math.random() - 0.5) * 60}px`;
+      puff.style.top = `${originY + (Math.random() - 0.5) * 30}px`;
+      puff.style.fontSize = '1.4rem';
+      puff.style.opacity = '0.8';
+      puff.style.pointerEvents = 'none';
+      puff.style.zIndex = '60';
+      puff.style.animation = 'cloudDrift 1.5s ease-out forwards';
+      this.canvasEl.appendChild(puff);
+
+      setTimeout(() => puff.remove(), 1600);
     }
   }
 

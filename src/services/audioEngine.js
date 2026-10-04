@@ -490,6 +490,140 @@ class AudioEngine {
         osc.stop(now + 0.42);
         break;
       }
+      case 'cheer': {
+        // Joyous fanfare chimes
+        [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          const st = now + idx * 0.08;
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, st);
+          gain.gain.setValueAtTime(0.25, st);
+          gain.gain.exponentialRampToValueAtTime(0.001, st + 0.35);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(st);
+          osc.stop(st + 0.36);
+        });
+        break;
+      }
+      case 'whoosh': {
+        // Soft airy cloud / wind whoosh
+        const bufferSize = Math.floor(this.ctx.sampleRate * 0.35);
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.sin((i / bufferSize) * Math.PI);
+        }
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(800, now);
+        filter.frequency.exponentialRampToValueAtTime(380, now + 0.35);
+        filter.Q.value = 1.6;
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.01, now);
+        gain.gain.linearRampToValueAtTime(0.32, now + 0.12);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        noise.start(now);
+        break;
+      }
+      case 'train': {
+        // Cheerful two-tone train whistle
+        [587.33, 739.99].forEach(freq => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(freq, now);
+          osc.frequency.linearRampToValueAtTime(freq * 1.05, now + 0.28);
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.value = 1400;
+
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.34);
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.35);
+        });
+        break;
+      }
+      case 'trumpet': {
+        // Cartoon elephant trumpet
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(280, now);
+        osc.frequency.exponentialRampToValueAtTime(440, now + 0.12);
+        osc.frequency.setValueAtTime(440, now + 0.18);
+        osc.frequency.exponentialRampToValueAtTime(540, now + 0.36);
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.value = 1200;
+        filter.Q.value = 2.4;
+
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.42);
+        break;
+      }
+      case 'flutter': {
+        // Delicate butterfly wing flutter chimes
+        [600, 750, 920, 1100].forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          const st = now + idx * 0.05;
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, st);
+          gain.gain.setValueAtTime(0.18, st);
+          gain.gain.exponentialRampToValueAtTime(0.001, st + 0.16);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(st);
+          osc.stop(st + 0.17);
+        });
+        break;
+      }
+      case 'rustle': {
+        // Storybook page flip rustle
+        const bufferSize = Math.floor(this.ctx.sampleRate * 0.2);
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.35));
+        }
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(1600, now);
+        filter.frequency.linearRampToValueAtTime(2600, now + 0.18);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.28, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        noise.start(now);
+        break;
+      }
       case 'twinkle':
       default: {
         // Sparkling fairy chimes
@@ -510,6 +644,28 @@ class AudioEngine {
       }
     }
   }
+
+  // Melodic letter chime for tactile and phonics feedback
+  playLetterChime(char) {
+    if (this.isMuted) return;
+    this.ensureContext();
+    if (!this.ctx) return;
+    const letter = (char || 'A').toUpperCase();
+    const baseFreq = 340 + (letter.charCodeAt(0) - 65) * 18;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(baseFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.25, now + 0.14);
+    gain.gain.setValueAtTime(0.22, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.23);
+  }
+
 
   // --- Real-time Phonics Drag Chanting ---
 
@@ -612,6 +768,7 @@ class AudioEngine {
       if (currentIndex < letters.length) {
         const char = letters[currentIndex];
         if (onLetterStep) onLetterStep(currentIndex);
+        this.playLetterChime(char);
 
         const hasCustomLetter = await audioStorage.hasAudio('letter_' + char);
         if (isStale()) return;

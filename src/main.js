@@ -30,6 +30,7 @@ class MonsterPhonicsApp {
 
   initDOM() {
     this.categoryBadgeEl = document.getElementById('mission-category');
+    this.progressTagEl = document.getElementById('mission-progress-tag');
     this.hintTextEl = document.getElementById('mission-hint');
     this.hintBoxEl = document.querySelector('.mission-hint-box');
     this.targetFrameEl = document.getElementById('target-word-frame');
@@ -39,6 +40,7 @@ class MonsterPhonicsApp {
     this.btnSoundToggle = document.getElementById('btn-sound-toggle');
     this.soundIconEl = document.getElementById('sound-toggle-icon');
     this.btnStickers = document.getElementById('btn-open-stickers');
+    this.btnTidyDesk = document.getElementById('btn-tidy-desk');
     this.theaterContainerEl = document.getElementById('vignette-theater-container');
     this.stickerBookContainerEl = document.getElementById('sticker-book-container');
 
@@ -105,6 +107,47 @@ class MonsterPhonicsApp {
     this.btnStickers.addEventListener('click', () => {
       audioEngine.playGrab();
       this.stickerBook.show();
+    });
+
+    // Tidy Desk Button
+    if (this.btnTidyDesk) {
+      this.btnTidyDesk.addEventListener('click', () => {
+        this.dragDropEngine.tidyLetters();
+      });
+    }
+
+    // Physical Keyboard / Typing Shortcuts for Desktop, Chromebooks & Accessibility
+    window.addEventListener('keydown', (e) => {
+      // Ignore if user is currently typing in an input or textarea
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      // Ignore if a modal dialog is currently active
+      if (this.theaterContainerEl && !this.theaterContainerEl.classList.contains('hidden')) return;
+      if (this.stickerBookContainerEl && !this.stickerBookContainerEl.classList.contains('hidden')) return;
+      if (this.parentalGateModal && !this.parentalGateModal.classList.contains('hidden')) return;
+
+      const key = e.key.toUpperCase();
+
+      // Navigation shortcuts
+      if (e.key === 'ArrowRight') {
+        audioEngine.playGrab();
+        this.nextWord();
+        return;
+      }
+      if (e.key === 'ArrowLeft') {
+        audioEngine.playGrab();
+        this.prevWord();
+        return;
+      }
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        this.dragDropEngine.unseatLastFilledSlot();
+        return;
+      }
+
+      // Letter keys A through Z
+      if (key >= 'A' && key <= 'Z' && key.length === 1) {
+        this.dragDropEngine.placeLetterFromKey(key);
+      }
     });
 
     // Re-scatter on window resize / mobile device orientation change
@@ -198,6 +241,9 @@ class MonsterPhonicsApp {
 
     // Update Header & Hint (Image will only appear in the celebration modal & sticker album!)
     this.categoryBadgeEl.textContent = wordData.category;
+    if (this.progressTagEl) {
+      this.progressTagEl.textContent = `${this.currentWordIndex + 1} / ${words.length} ⭐`;
+    }
     this.hintTextEl.textContent = wordData.hint;
 
     // Clear Target Frame & Tray

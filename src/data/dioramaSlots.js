@@ -181,15 +181,43 @@ export const DIORAMA_SLOTS = {
   }
 };
 
+export function getCustomDioramaSlots() {
+  try {
+    const stored = localStorage.getItem('monster_phonics_custom_diorama_slots');
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function saveCustomDioramaSlot(wordId, slotData) {
+  try {
+    const slots = getCustomDioramaSlots();
+    slots[wordId] = slotData;
+    localStorage.setItem('monster_phonics_custom_diorama_slots', JSON.stringify(slots));
+  } catch {}
+}
+
 export function getSlotForWord(wordId) {
-  return DIORAMA_SLOTS[wordId] || {
+  const customSlots = getCustomDioramaSlots();
+  if (customSlots[wordId]) {
+    return customSlots[wordId];
+  }
+
+  if (DIORAMA_SLOTS[wordId]) {
+    return DIORAMA_SLOTS[wordId];
+  }
+
+  // Dynamic zone fallback
+  return {
     id: wordId,
-    word: wordId.toUpperCase(),
-    icon: '🎨',
+    word: (wordId || '').toUpperCase(),
+    icon: '⭐',
     zone: 'taman',
     zoneX: 0,
-    x: 200,
+    x: 220,
     y: 200,
     hint: 'Di dunia diorama kertas'
   };
 }
+

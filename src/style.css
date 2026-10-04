@@ -279,6 +279,13 @@ body::after {
   margin-bottom: 0.85rem;
 }
 
+.mission-meta-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
 .mission-category {
   background: #E8F4F8;
   border: 2.5px solid var(--color-marker);
@@ -287,6 +294,18 @@ body::after {
   font-family: var(--font-heading);
   font-size: 1.05rem;
   font-weight: 700;
+  box-shadow: 2px 2px 0px var(--color-marker);
+}
+
+.mission-progress-tag {
+  background: #FFF9DB;
+  border: 2.5px solid var(--color-marker);
+  border-radius: var(--radius-badge);
+  padding: 0.4rem 0.85rem;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-dark);
   box-shadow: 2px 2px 0px var(--color-marker);
 }
 
@@ -470,6 +489,35 @@ body::after {
   border-radius: var(--radius-badge);
   padding: 0.25rem 0.9rem;
   text-align: center;
+}
+
+.btn-tidy-desk {
+  background: #FFFFFF;
+  border: 2.5px solid var(--color-marker);
+  border-radius: var(--radius-btn);
+  padding: 0.35rem 0.85rem;
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  box-shadow: 2px 2px 0px var(--color-marker);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  white-space: nowrap;
+}
+
+.btn-tidy-desk:hover {
+  transform: translateY(-2px);
+  box-shadow: 3px 3px 0px var(--color-marker);
+  background: #FFF9DB;
+}
+
+.btn-tidy-desk:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0px var(--color-marker);
 }
 
 .monster-tray.scatter-play-desk {
@@ -1393,6 +1441,16 @@ body::after {
 @keyframes dioramaBubbleFloat {
   0% { transform: translateY(0) scale(0.5); opacity: 0.9; }
   100% { transform: translateY(-70px) scale(1.4); opacity: 0; }
+}
+
+@keyframes sparkleFloatUp {
+  0% { transform: translateY(0) scale(0.6) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(-60px) scale(1.3) rotate(36deg); opacity: 0; }
+}
+
+@keyframes cloudDrift {
+  0% { transform: translateY(0) scale(0.8); opacity: 0.8; }
+  100% { transform: translateY(-40px) translateX(25px) scale(1.4); opacity: 0; }
 }
 
 /* ==========================================================
