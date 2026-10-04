@@ -235,6 +235,31 @@ class AudioEngine {
     this.playSnap();
   }
 
+  // Gentle tactile magnet pop when hovering over correct slot
+  playSlotSnapHover() {
+    this.triggerHaptic(12);
+    if (this.isMuted) return;
+    this.ensureContext();
+    if (!this.ctx) return;
+
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, now);
+    osc.frequency.exponentialRampToValueAtTime(1174.66, now + 0.05); // D6 pop
+
+    gain.gain.setValueAtTime(0.06, now);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.06);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.07);
+  }
+
   // Peel and Stick sound (for diorama sticker interactions)
   playPeelStick() {
     this.triggerHaptic(22);
