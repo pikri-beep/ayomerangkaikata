@@ -68,11 +68,15 @@ export class DragDropEngine {
     let startY = pad;
     if (missionCard) {
       const mRect = missionCard.getBoundingClientRect();
-      startY = Math.max(pad, Math.round(mRect.bottom - rect.top + 6));
+      startY = Math.max(pad, Math.round(mRect.bottom - rect.top + 4));
     } else {
+      startY = Math.round(deskH * 0.36);
+    }
+    // Safety clamp: ensure letters start area never exceeds 44% of desk height
+    if (startY > deskH * 0.44) {
       startY = Math.round(deskH * 0.38);
     }
-    const availableH = Math.max(70, deskH - startY - pad);
+    const availableH = Math.max(80, deskH - startY - pad);
 
     // Distribute columns and rows smartly based on aspect ratio
     const isWide = deskW / availableH > 1.8;
@@ -142,11 +146,15 @@ export class DragDropEngine {
     let startY = pad;
     if (missionCard) {
       const mRect = missionCard.getBoundingClientRect();
-      startY = Math.max(pad, Math.round(mRect.bottom - rect.top + 6));
+      startY = Math.max(pad, Math.round(mRect.bottom - rect.top + 4));
     } else {
+      startY = Math.round(deskH * 0.36);
+    }
+    // Safety clamp: ensure letters start area never exceeds 44% of desk height
+    if (startY > deskH * 0.44) {
       startY = Math.round(deskH * 0.38);
     }
-    const availableH = Math.max(70, deskH - startY - pad);
+    const availableH = Math.max(80, deskH - startY - pad);
 
     const isWide = deskW / availableH > 1.8;
     let cols = isWide
