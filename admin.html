@@ -119,18 +119,20 @@
     <section class="admin-toolbar">
       <div class="toolbar-left">
         <input type="text" id="filter-search" class="search-input" placeholder="🔍 Cari nama kata...">
-        <select id="filter-category" class="filter-select">
-          <option value="all">Semua Kategori</option>
-          <option value="Hewan">🐱 Hewan</option>
-          <option value="Buah & Makanan">🍎 Buah & Makanan</option>
-          <option value="Benda">⚽ Benda</option>
-          <option value="Alam">☁️ Alam</option>
-        </select>
-        <select id="filter-voice-status" class="filter-select">
-          <option value="all">Semua Status Suara</option>
-          <option value="has-recording">Hanya Yang Sudah Direkam</option>
-          <option value="needs-recording">Belum Direkam (Default)</option>
-        </select>
+        <div class="filter-dropdowns-group">
+          <select id="filter-category" class="filter-select">
+            <option value="all">Semua Kategori</option>
+            <option value="Hewan">🐱 Hewan</option>
+            <option value="Buah & Makanan">🍎 Buah & Makanan</option>
+            <option value="Benda">⚽ Benda</option>
+            <option value="Alam">☁️ Alam</option>
+          </select>
+          <select id="filter-voice-status" class="filter-select">
+            <option value="all">Semua Status Suara</option>
+            <option value="has-recording">Hanya Yang Sudah Direkam</option>
+            <option value="needs-recording">Belum Direkam (Default)</option>
+          </select>
+        </div>
       </div>
       <div class="toolbar-right">
         <span id="filtered-count-badge" class="word-category-badge">Menampilkan 0 kata</span>
@@ -221,13 +223,13 @@
           <span>ATAU UNGGAH FILE SUARA</span>
         </div>
 
-        <div style="display: flex; gap: 0.5rem; justify-content: center;">
+        <div class="studio-upload-actions">
           <input type="file" id="audio-file-input" accept="audio/*" style="display: none;">
-          <button class="btn-paper" id="btn-upload-file" style="font-size: 0.9rem;">
+          <button class="btn-paper" id="btn-upload-file">
             <span>📁</span>
             <span>Unggah File Audio (.mp3, .wav, .m4a)</span>
           </button>
-          <button class="btn-paper" id="btn-delete-recording" style="display: none; color: #FA5252; font-size: 0.9rem;">
+          <button class="btn-paper" id="btn-delete-recording" style="display: none; color: #FA5252;">
             <span>🗑️</span>
             <span>Hapus Suara Saya</span>
           </button>
