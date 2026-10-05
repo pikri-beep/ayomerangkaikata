@@ -63,7 +63,11 @@ class AdminApp {
     this.studioPromptHint = document.getElementById('studio-prompt-hint');
     this.waveformBars = document.querySelectorAll('.waveform-bar');
     this.recordTimer = document.getElementById('record-timer');
+    this.recordMaxLimit = document.getElementById('record-max-limit');
+    this.recordProgressBar = document.getElementById('record-progress-bar');
+    this.promptDurationBadge = document.getElementById('prompt-duration-badge');
     this.recordIndicator = document.getElementById('record-indicator');
+    this.recordIndicatorText = document.getElementById('record-indicator-text');
     this.btnToggleRecord = document.getElementById('btn-toggle-record');
     this.recordBtnIcon = document.getElementById('record-btn-icon');
     this.recordBtnLabel = document.getElementById('record-btn-label');
@@ -488,9 +492,32 @@ class AdminApp {
     this.btnDeleteRecording.style.display = hasAudio ? 'inline-flex' : 'none';
   }
 
+  getMaxDuration() {
+    if (this.currentRecordType === 'phonics') return 2.0; // Pas untuk looping 850ms saat drag huruf
+    if (this.currentRecordType === 'word') return 3.0; // Pas untuk sebutan kata tunggal
+    if (this.currentRecordType === 'meaning') return 8.0; // Pas untuk kalimat cerita / arti
+    return 3.0;
+  }
+
+  getDurationBadgeText() {
+    if (this.currentRecordType === 'phonics') return '⏱️ Maks 2.0 Detik (Looping Huruf)';
+    if (this.currentRecordType === 'word') return '⏱️ Maks 3.0 Detik (Sebut Kata)';
+    if (this.currentRecordType === 'meaning') return '⏱️ Maks 8.0 Detik (Cerita Kata)';
+    return '⏱️ Maks 3.0 Detik';
+  }
+
   resetRecorderUI() {
     this.recorder.reset();
-    this.recordTimer.textContent = '00:00';
+    const maxSec = this.getMaxDuration();
+    if (this.recordTimer) this.recordTimer.textContent = `0.0s / ${maxSec.toFixed(1)}s`;
+    if (this.recordMaxLimit) this.recordMaxLimit.textContent = `Maks: ${maxSec.toFixed(1)}s`;
+    if (this.recordProgressBar) {
+      this.recordProgressBar.style.width = '0%';
+      this.recordProgressBar.style.background = '#2EC4B6';
+    }
+    if (this.promptDurationBadge) {
+      this.promptDurationBadge.textContent = this.getDurationBadgeText();
+    }
     this.recordIndicator.classList.add('hidden');
     this.recordBtnIcon.textContent = '🔴';
     this.recordBtnLabel.textContent = 'Mulai Rekam Suara';
@@ -502,19 +529,18 @@ class AdminApp {
 
   async toggleRecording() {
     if (this.recorder.state === 'recording') {
-      // Stop recording
+      // Stop recording manually
       await this.recorder.stopRecording();
-      this.recordIndicator.classList.add('hidden');
-      this.recordBtnIcon.textContent = '🔄';
-      this.recordBtnLabel.textContent = 'Rekam Ulang';
-      this.btnToggleRecord.className = 'btn-paper btn-record-large';
-      this.btnPlayPreview.style.display = 'inline-flex';
-      this.btnSaveRecording.style.display = 'inline-flex';
+      this.onRecordingFinished(false);
     } else {
-      // Start recording
+      // Start recording with maximum duration enforcement
       try {
-        await this.recorder.startRecording();
+        const maxSec = this.getMaxDuration();
+        await this.recorder.startRecording(maxSec);
         this.recordIndicator.classList.remove('hidden');
+        if (this.recordIndicatorText) {
+          this.recordIndicatorText.innerHTML = `Sedang merekam suara... (Maksimal ${maxSec.toFixed(1)}s)`;
+        }
         this.recordBtnIcon.textContent = '⏹️';
         this.recordBtnLabel.textContent = 'Selesai Rekam';
         this.btnToggleRecord.className = 'btn-paper btn-paper-primary btn-record-large';
@@ -524,6 +550,21 @@ class AdminApp {
         alert(err.message || 'Gagal memulai perekaman.');
       }
     }
+  }
+
+  onRecordingFinished(autoStopped = false) {
+    this.recordIndicator.classList.remove('hidden');
+    const maxSec = this.getMaxDuration();
+    if (this.recordIndicatorText) {
+      this.recordIndicatorText.innerHTML = autoStopped
+        ? `<span style="color: #2EC4B6; font-weight: 700;">⏱️ Maksimal ${maxSec.toFixed(1)}s tercapai! Rekaman selesai pas.</span>`
+        : `<span style="color: #2EC4B6; font-weight: 700;">✅ Rekaman selesai! Durasi pas.</span>`;
+    }
+    this.recordBtnIcon.textContent = '🔄';
+    this.recordBtnLabel.textContent = 'Rekam Ulang';
+    this.btnToggleRecord.className = 'btn-paper btn-record-large';
+    this.btnPlayPreview.style.display = 'inline-flex';
+    this.btnSaveRecording.style.display = 'inline-flex';
   }
 
   togglePreview() {
@@ -540,8 +581,8 @@ class AdminApp {
 
   handleRecorderStateChange(state) {
     if (state === 'recorded') {
-      this.btnPlayPreview.style.display = 'inline-flex';
-      this.btnSaveRecording.style.display = 'inline-flex';
+      const isAuto = this.recorder.durationSec >= this.getMaxDuration() - 0.15;
+      this.onRecordingFinished(isAuto);
     }
   }
 
@@ -556,9 +597,23 @@ class AdminApp {
   }
 
   handleTimeUpdate(sec) {
-    const mins = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60);
-    this.recordTimer.textContent = `${String(mins).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    const maxSec = this.getMaxDuration();
+    const current = Math.min(sec, maxSec);
+    if (this.recordTimer) {
+      this.recordTimer.textContent = `${current.toFixed(1)}s / ${maxSec.toFixed(1)}s`;
+    }
+
+    if (this.recordProgressBar) {
+      const pct = Math.min(100, (current / maxSec) * 100);
+      this.recordProgressBar.style.width = `${pct}%`;
+      if (pct >= 85) {
+        this.recordProgressBar.style.background = '#EF476F'; // red alert
+      } else if (pct >= 60) {
+        this.recordProgressBar.style.background = '#FFD166'; // yellow warning
+      } else {
+        this.recordProgressBar.style.background = '#2EC4B6'; // teal ok
+      }
+    }
   }
 
   async saveActiveRecording() {

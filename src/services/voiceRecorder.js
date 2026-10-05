@@ -87,6 +87,7 @@ export class VoiceRecorder {
     // Setup visualizer
     this.setupVisualizer(this.audioStream);
 
+    this.maxDurationSec = maxDurationSec || 0;
     this.mediaRecorder.start(100);
     this.startTime = Date.now();
     this.durationSec = 0;
@@ -95,7 +96,13 @@ export class VoiceRecorder {
     this.timerInterval = setInterval(() => {
       this.durationSec = (Date.now() - this.startTime) / 1000;
       this.onTimeUpdate(this.durationSec);
-    }, 100);
+
+      // Auto-stop if reached max duration limit
+      if (this.maxDurationSec > 0 && this.durationSec >= this.maxDurationSec) {
+        clearInterval(this.timerInterval);
+        this.stopRecording();
+      }
+    }, 50);
   }
 
   setupVisualizer(stream) {

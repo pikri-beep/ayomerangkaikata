@@ -168,7 +168,10 @@
 
       <!-- Prompt Guide Card -->
       <div class="prompt-card">
-        <div class="prompt-label" id="studio-prompt-label">Contoh yang Diucapkan:</div>
+        <div class="prompt-header-row">
+          <div class="prompt-label" id="studio-prompt-label">Contoh yang Diucapkan:</div>
+          <div class="prompt-duration-badge" id="prompt-duration-badge">⏱️ Maks 3.0 Detik</div>
+        </div>
         <div class="prompt-phrase" id="studio-prompt-phrase">"Kucing!"</div>
         <div class="prompt-hint" id="studio-prompt-hint">Ucapkan dengan riang dan jelas satu kali.</div>
       </div>
@@ -194,10 +197,21 @@
           <div class="waveform-bar"></div>
           <div class="waveform-bar"></div>
         </div>
-        <div class="record-timer" id="record-timer">00:00</div>
+
+        <!-- Timer & Max Duration Display -->
+        <div class="timer-display-box">
+          <div class="record-timer" id="record-timer">0.0s / 3.0s</div>
+          <div class="record-max-limit" id="record-max-limit">Maks: 3.0s</div>
+        </div>
+
+        <!-- Visual Countdown Progress Bar -->
+        <div class="record-progress-track">
+          <div class="record-progress-bar" id="record-progress-bar"></div>
+        </div>
+
         <div class="record-indicator hidden" id="record-indicator">
           <span class="pulse-red-dot"></span>
-          <span>Sedang merekam suara Anda...</span>
+          <span id="record-indicator-text">Sedang merekam suara Anda...</span>
         </div>
       </div>
 

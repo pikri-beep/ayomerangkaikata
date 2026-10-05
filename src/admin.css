@@ -554,6 +554,26 @@ body.admin-body {
   text-align: center;
 }
 
+.prompt-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+
+.prompt-duration-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #856404;
+  background: #FFF3CD;
+  border: 1.5px solid #FFEEBA;
+  border-radius: 8px;
+  padding: 0.15rem 0.5rem;
+  white-space: nowrap;
+}
+
 .prompt-label {
   font-size: 0.85rem;
   text-transform: uppercase;
@@ -606,12 +626,48 @@ body.admin-body {
   transition: height 0.08s ease;
 }
 
+.timer-display-box {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.55rem;
+  margin-top: 0.5rem;
+}
+
 .record-timer {
   font-family: 'Balsamiq Sans', cursive, sans-serif;
   color: #FFF;
   font-size: 1.5rem;
   font-weight: 700;
-  margin-top: 0.5rem;
+  letter-spacing: 0.5px;
+}
+
+.record-max-limit {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #CBD5E1;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.record-progress-track {
+  width: 100%;
+  max-width: 280px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 0.45rem;
+}
+
+.record-progress-bar {
+  width: 0%;
+  height: 100%;
+  background: #2EC4B6;
+  border-radius: 99px;
+  transition: width 0.05s linear, background-color 0.2s ease;
 }
 
 .record-indicator {
@@ -621,7 +677,7 @@ body.admin-body {
   font-size: 0.9rem;
   color: #FF6B6B;
   font-weight: 700;
-  margin-top: 0.2rem;
+  margin-top: 0.35rem;
 }
 
 .pulse-red-dot {
