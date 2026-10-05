@@ -100,6 +100,12 @@
 
       <div class="mission-top-bar">
         <div class="mission-meta-left">
+          <!-- Tombol Hamburger khusus layar HP kecil saat navbar disembunyikan -->
+          <button type="button" class="btn-hamburger-menu" id="btn-hamburger-menu" aria-label="Buka Menu" title="Menu Navigasi">
+            <span class="hamburger-icon">☰</span>
+          </button>
+          <!-- Tombol Prev di sisi kiri -->
+          <button type="button" class="nav-arrow-btn nav-arrow-prev" id="btn-prev-word" aria-label="Kata Sebelumnya" title="Kata Sebelumnya">◀</button>
           <span class="mission-category" id="mission-category">🐱 Hewan</span>
           <span class="mission-progress-tag" id="mission-progress-tag">1 / 17 ⭐</span>
           <!-- Mobile hint toggle button (compact 💡) -->
@@ -110,14 +116,12 @@
         </div>
 
         <div class="mission-meta-right">
-          <button class="btn-tidy-desk" id="btn-tidy-desk" title="Tata rapi huruf di meja" aria-label="Tata rapi huruf di meja">
+          <button type="button" class="btn-tidy-desk" id="btn-tidy-desk" title="Tata rapi huruf di meja" aria-label="Tata rapi huruf di meja">
             <span>✨</span>
             <span class="btn-tidy-label">Rapikan</span>
           </button>
-          <div class="word-navigator">
-            <button class="nav-arrow-btn" id="btn-prev-word" aria-label="Kata Sebelumnya" title="Kata Sebelumnya">◀</button>
-            <button class="nav-arrow-btn" id="btn-next-word-top" aria-label="Kata Berikutnya" title="Kata Berikutnya">▶</button>
-          </div>
+          <!-- Tombol Next di sisi kanan -->
+          <button type="button" class="nav-arrow-btn nav-arrow-next" id="btn-next-word-top" aria-label="Kata Berikutnya" title="Kata Berikutnya">▶</button>
         </div>
       </div>
 
@@ -233,6 +237,45 @@
       <button class="btn-paper btn-paper-primary" id="btn-save-settings" style="width: 100%; justify-content: center; font-size: 1.15rem; padding: 0.75rem;">
         <span>Selesai</span>
       </button>
+    </div>
+  </div>
+
+  <!-- Hamburger Menu Modal for Small Screens -->
+  <div id="hamburger-menu-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="hamburger-modal-title">
+    <div class="hamburger-menu-card animate-pop-in">
+      <div class="hamburger-modal-header">
+        <div class="hamburger-modal-title" id="hamburger-modal-title">
+          <span class="hamburger-title-icon">🎨</span>
+          <span>Pilihan Menu</span>
+        </div>
+        <button type="button" class="modal-close-btn" id="btn-close-hamburger" aria-label="Tutup Menu">✕</button>
+      </div>
+
+      <div class="hamburger-menu-items">
+        <button type="button" class="btn-hamburger-item btn-hamburger-stickers" id="btn-hamburger-stickers">
+          <span class="hamburger-item-icon">📒</span>
+          <div class="hamburger-item-text">
+            <span class="hamburger-item-title">Buku Stiker</span>
+            <span class="hamburger-item-sub">Koleksi stiker yang sudah dirangkai</span>
+          </div>
+        </button>
+
+        <button type="button" class="btn-hamburger-item btn-hamburger-home" id="btn-hamburger-home">
+          <span class="hamburger-item-icon">🏠</span>
+          <div class="hamburger-item-text">
+            <span class="hamburger-item-title">Menu Utama</span>
+            <span class="hamburger-item-sub">Kembali ke halaman depan</span>
+          </div>
+        </button>
+
+        <button type="button" class="btn-hamburger-item btn-hamburger-settings" id="btn-hamburger-settings">
+          <span class="hamburger-item-icon">⚙️</span>
+          <div class="hamburger-item-text">
+            <span class="hamburger-item-title">Pengaturan</span>
+            <span class="hamburger-item-sub">Atur suara lafal & musik latar</span>
+          </div>
+        </button>
+      </div>
     </div>
   </div>
 

@@ -74,6 +74,14 @@ class MonsterPhonicsApp {
     this.theaterContainerEl = document.getElementById('vignette-theater-container');
     this.stickerBookContainerEl = document.getElementById('sticker-book-container');
 
+    // Hamburger Menu Elements (Mobile / Small Screen)
+    this.btnHamburger = document.getElementById('btn-hamburger-menu');
+    this.hamburgerModal = document.getElementById('hamburger-menu-modal');
+    this.btnCloseHamburger = document.getElementById('btn-close-hamburger');
+    this.btnHamburgerStickers = document.getElementById('btn-hamburger-stickers');
+    this.btnHamburgerHome = document.getElementById('btn-hamburger-home');
+    this.btnHamburgerSettings = document.getElementById('btn-hamburger-settings');
+
     // Secret Parental Gate Elements
     this.brandBadgeEl = document.querySelector('.brand-badge');
     this.parentalGateModal = document.getElementById('parental-gate-modal');
@@ -159,6 +167,62 @@ class MonsterPhonicsApp {
     if (this.btnOpenSettings) {
       this.btnOpenSettings.addEventListener('click', () => {
         audioEngine.playPaperGrab();
+        if (this.settingsModal) {
+          this.settingsModal.classList.remove('hidden');
+        }
+      });
+    }
+
+    // Hamburger Menu Controls (Mobile / Small Screens)
+    if (this.btnHamburger) {
+      this.btnHamburger.addEventListener('click', () => {
+        audioEngine.playPaperGrab();
+        if (this.hamburgerModal) {
+          this.hamburgerModal.classList.remove('hidden');
+        }
+      });
+    }
+
+    if (this.btnCloseHamburger) {
+      this.btnCloseHamburger.addEventListener('click', () => {
+        audioEngine.playPaperGrab();
+        if (this.hamburgerModal) {
+          this.hamburgerModal.classList.add('hidden');
+        }
+      });
+    }
+
+    if (this.hamburgerModal) {
+      this.hamburgerModal.addEventListener('click', (e) => {
+        if (e.target === this.hamburgerModal) {
+          this.hamburgerModal.classList.add('hidden');
+        }
+      });
+    }
+
+    if (this.btnHamburgerStickers) {
+      this.btnHamburgerStickers.addEventListener('click', () => {
+        audioEngine.playPaperGrab();
+        if (this.hamburgerModal) this.hamburgerModal.classList.add('hidden');
+        this.stickerBook.show();
+      });
+    }
+
+    if (this.btnHamburgerHome) {
+      this.btnHamburgerHome.addEventListener('click', () => {
+        audioEngine.playPaperGrab();
+        if (this.hamburgerModal) this.hamburgerModal.classList.add('hidden');
+        this.updateMenuStats();
+        if (this.mainMenuScreen) {
+          this.mainMenuScreen.classList.remove('hidden');
+        }
+      });
+    }
+
+    if (this.btnHamburgerSettings) {
+      this.btnHamburgerSettings.addEventListener('click', () => {
+        audioEngine.playPaperGrab();
+        if (this.hamburgerModal) this.hamburgerModal.classList.add('hidden');
         if (this.settingsModal) {
           this.settingsModal.classList.remove('hidden');
         }
@@ -268,6 +332,7 @@ class MonsterPhonicsApp {
       if (this.theaterContainerEl && !this.theaterContainerEl.classList.contains('hidden')) return;
       if (this.stickerBookContainerEl && !this.stickerBookContainerEl.classList.contains('hidden')) return;
       if (this.parentalGateModal && !this.parentalGateModal.classList.contains('hidden')) return;
+      if (this.hamburgerModal && !this.hamburgerModal.classList.contains('hidden')) return;
 
       const key = e.key.toUpperCase();
 
