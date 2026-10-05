@@ -4073,10 +4073,28 @@ body::after {
   box-sizing: border-box;
 }
 
-/* Strict display when screen is in portrait mode on mobile/phone screens */
+/* Strict display when screen is in portrait mode on mobile/phone screens ONLY during gameplay,
+   NOT on the Main Menu, Parental Gate, or Admin page */
 @media (orientation: portrait) and (max-width: 900px), (max-aspect-ratio: 1/1) and (max-width: 900px) {
   .rotate-device-overlay {
     display: flex !important;
+  }
+
+  /* Nonaktifkan landscape strict saat di Menu Utama */
+  #main-menu-screen:not(.hidden) ~ .rotate-device-overlay,
+  body:has(#main-menu-screen:not(.hidden)) .rotate-device-overlay {
+    display: none !important;
+  }
+
+  /* Nonaktifkan landscape strict saat membuka Pintu Masuk Orang Tua / Guru */
+  #parental-gate-modal:not(.hidden) ~ .rotate-device-overlay,
+  body:has(#parental-gate-modal:not(.hidden)) .rotate-device-overlay {
+    display: none !important;
+  }
+
+  /* Nonaktifkan landscape strict di halaman Admin */
+  .admin-body .rotate-device-overlay {
+    display: none !important;
   }
 }
 

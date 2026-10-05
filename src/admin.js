@@ -783,7 +783,7 @@ class AdminApp {
       });
 
       if (!res.ok) {
-        throw new Error('Server mengembalikan status ' + res.status);
+        throw new Error('Fitur sinkronisasi langsung ke berkas web memerlukan server lokal (laptop pengembang). Jika diakses di web online (Vercel), silakan gunakan tombol "📥 Unduh Cadangan (.json)" di bawah dan kirimkan berkasnya.');
       }
 
       const data = await res.json();
