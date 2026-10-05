@@ -6,6 +6,7 @@ import { VoiceRecorder } from './services/voiceRecorder.js';
 import { LETTER_PHONICS_MAP } from './data/words.js';
 import { parentalLock } from './services/parentalLock.js';
 import { getSlotForWord, saveCustomDioramaSlot } from './data/dioramaSlots.js';
+import { getSupabaseCredentials, saveSupabaseCredentials, isSupabaseConfigured, getSupabase } from './services/supabaseClient.js';
 
 function blobToDataUrl(blob) {
   return new Promise((resolve, reject) => {
@@ -105,6 +106,15 @@ class AdminApp {
     this.btnTriggerRestore = document.getElementById('btn-trigger-restore');
     this.backupFileInput = document.getElementById('backup-file-input');
     this.btnResetDefaults = document.getElementById('btn-reset-defaults');
+
+    // Supabase Cloud Elements
+    this.supabaseStatusBadge = document.getElementById('supabase-status-badge');
+    this.supabaseUrlInput = document.getElementById('supabase-url-input');
+    this.supabaseKeyInput = document.getElementById('supabase-key-input');
+    this.btnSaveSupabase = document.getElementById('btn-save-supabase');
+    this.btnDisconnectSupabase = document.getElementById('btn-disconnect-supabase');
+    this.btnSyncNowSupabase = document.getElementById('btn-sync-now-supabase');
+    this.supabaseSyncStatus = document.getElementById('supabase-sync-status');
 
     // Secret Parental Lock Elements
     this.adminLockScreen = document.getElementById('admin-lock-screen');
@@ -418,6 +428,9 @@ class AdminApp {
     if (btnSyncProject) {
       btnSyncProject.addEventListener('click', () => this.syncAllAudioToProject());
     }
+
+    // Supabase Cloud Sync Events
+    this.initSupabaseUI();
   }
 
   // --- Voice Studio Logic ---
@@ -906,6 +919,141 @@ class AdminApp {
       await this.refreshData();
       alert('Aplikasi telah dikembalikan ke pengaturan awal pabrik.');
       this.modalBackup.classList.add('hidden');
+    }
+  }
+
+  // --- Supabase Cloud UI & Sync Logic ---
+
+  initSupabaseUI() {
+    if (!this.supabaseStatusBadge) return;
+
+    const { url, anonKey } = getSupabaseCredentials();
+    if (this.supabaseUrlInput) this.supabaseUrlInput.value = url;
+    if (this.supabaseKeyInput) this.supabaseKeyInput.value = anonKey;
+
+    this.updateSupabaseStatusDisplay();
+
+    if (this.btnSaveSupabase) {
+      this.btnSaveSupabase.addEventListener('click', () => this.saveSupabaseSettings());
+    }
+
+    if (this.btnDisconnectSupabase) {
+      this.btnDisconnectSupabase.addEventListener('click', () => this.disconnectSupabase());
+    }
+
+    if (this.btnSyncNowSupabase) {
+      this.btnSyncNowSupabase.addEventListener('click', () => this.syncNowSupabase());
+    }
+  }
+
+  updateSupabaseStatusDisplay() {
+    const configured = isSupabaseConfigured();
+    if (!this.supabaseStatusBadge) return;
+
+    if (configured) {
+      this.supabaseStatusBadge.textContent = '🟢 Terhubung ke Cloud';
+      this.supabaseStatusBadge.style.background = '#D3F9D8';
+      this.supabaseStatusBadge.style.color = '#2B8A3E';
+      if (this.btnDisconnectSupabase) this.btnDisconnectSupabase.style.display = 'inline-flex';
+      if (this.btnSyncNowSupabase) this.btnSyncNowSupabase.style.display = 'inline-flex';
+    } else {
+      this.supabaseStatusBadge.textContent = '⚪ Mode Lokal (Offline)';
+      this.supabaseStatusBadge.style.background = '#E9ECEF';
+      this.supabaseStatusBadge.style.color = '#495057';
+      if (this.btnDisconnectSupabase) this.btnDisconnectSupabase.style.display = 'none';
+      if (this.btnSyncNowSupabase) this.btnSyncNowSupabase.style.display = 'none';
+    }
+  }
+
+  async saveSupabaseSettings() {
+    const url = (this.supabaseUrlInput?.value || '').trim();
+    const key = (this.supabaseKeyInput?.value || '').trim();
+
+    if (!url || !key) {
+      alert('Mohon isi Supabase Project URL dan Anon Key.');
+      return;
+    }
+
+    if (!url.startsWith('https://')) {
+      alert('Supabase URL harus diawali dengan https://');
+      return;
+    }
+
+    saveSupabaseCredentials(url, key);
+    this.updateSupabaseStatusDisplay();
+
+    if (this.supabaseSyncStatus) {
+      this.supabaseSyncStatus.style.display = 'block';
+      this.supabaseSyncStatus.style.color = '#1971C2';
+      this.supabaseSyncStatus.style.background = '#E7F5FF';
+      this.supabaseSyncStatus.textContent = '⏳ Menguji koneksi & menyinkronkan data...';
+    }
+
+    try {
+      const result = await audioStorage.syncAllFromSupabase();
+      if (result.success) {
+        await wordRepository.init();
+        await this.refreshData();
+        if (this.supabaseSyncStatus) {
+          this.supabaseSyncStatus.style.color = '#2B8A3E';
+          this.supabaseSyncStatus.style.background = '#EBFBEE';
+          this.supabaseSyncStatus.textContent = `✅ Berhasil terhubung! (${result.wordsSynced || 0} kata & ${result.audioSynced || 0} audio tersinkronisasi)`;
+        }
+        alert('🎉 Sukses terhubung ke Supabase! Suara rekaman dan kata baru akan otomatis sinkron antar perangkat.');
+      } else {
+        throw new Error(result.error || 'Pastikan skrip SQL di Supabase sudah dijalankan.');
+      }
+    } catch (err) {
+      if (this.supabaseSyncStatus) {
+        this.supabaseSyncStatus.style.color = '#E03131';
+        this.supabaseSyncStatus.style.background = '#FFF5F5';
+        this.supabaseSyncStatus.textContent = `⚠️ Terhubung, namun sinkronisasi gagal: ${err.message}`;
+      }
+      alert(`Peringatan: Kunci tersimpan, namun sinkronisasi data gagal: ${err.message}. Pastikan tabel custom_words, custom_audio_meta, dan bucket custom_audio sudah dibuat di Supabase.`);
+    }
+  }
+
+  disconnectSupabase() {
+    if (confirm('Putuskan koneksi ke Supabase? Data yang ada di browser ini tidak akan dihapus, namun sinkronisasi cloud akan dinonaktifkan.')) {
+      saveSupabaseCredentials('', '');
+      if (this.supabaseUrlInput) this.supabaseUrlInput.value = '';
+      if (this.supabaseKeyInput) this.supabaseKeyInput.value = '';
+      this.updateSupabaseStatusDisplay();
+      if (this.supabaseSyncStatus) this.supabaseSyncStatus.style.display = 'none';
+      alert('Koneksi Supabase telah diputuskan.');
+    }
+  }
+
+  async syncNowSupabase() {
+    if (this.btnSyncNowSupabase) this.btnSyncNowSupabase.disabled = true;
+    if (this.supabaseSyncStatus) {
+      this.supabaseSyncStatus.style.display = 'block';
+      this.supabaseSyncStatus.style.color = '#5F3DC4';
+      this.supabaseSyncStatus.style.background = '#F3F0FF';
+      this.supabaseSyncStatus.textContent = '⏳ Menarik data terbaru dari Supabase...';
+    }
+
+    try {
+      const result = await audioStorage.syncAllFromSupabase();
+      if (result.success) {
+        await wordRepository.init();
+        await this.refreshData();
+        if (this.supabaseSyncStatus) {
+          this.supabaseSyncStatus.style.color = '#2B8A3E';
+          this.supabaseSyncStatus.style.background = '#EBFBEE';
+          this.supabaseSyncStatus.textContent = `✅ Sinkronisasi selesai: ${result.wordsSynced || 0} kata & ${result.audioSynced || 0} audio berhasil ditarik!`;
+        }
+      } else {
+        throw new Error(result.error || 'Gagal menarik data');
+      }
+    } catch (err) {
+      if (this.supabaseSyncStatus) {
+        this.supabaseSyncStatus.style.color = '#E03131';
+        this.supabaseSyncStatus.style.background = '#FFF5F5';
+        this.supabaseSyncStatus.textContent = `❌ Gagal sinkronisasi: ${err.message}`;
+      }
+    } finally {
+      if (this.btnSyncNowSupabase) this.btnSyncNowSupabase.disabled = false;
     }
   }
 

@@ -338,6 +338,46 @@
       <p class="modal-subtitle">Simpan seluruh kata dan rekaman suara Anda ke file agar tidak hilang.</p>
 
       <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <!-- Supabase Cloud Sync (Online Multi-device Automatic Sync) -->
+        <div style="background: #F3F0FF; border: 2.5px solid #7950F2; border-radius: 16px; padding: 1.15rem; box-shadow: 0 4px 0 #7950F2;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 1.5rem;">☁️</span>
+              <h3 style="margin: 0; font-size: 1.2rem; color: #5F3DC4;">Sinkronisasi Otomatis Cloud (Supabase)</h3>
+            </div>
+            <span id="supabase-status-badge" style="font-size: 0.8rem; font-weight: 700; padding: 0.25rem 0.65rem; border-radius: 20px; background: #E9ECEF; color: #495057;">Memeriksa...</span>
+          </div>
+          <p style="margin: 0 0 0.85rem; font-size: 0.92rem; color: #5F3DC4; line-height: 1.35;">
+            Hubungkan ke Supabase agar setiap rekaman suara & kata baru dari teman atau guru otomatis tersimpan online dan langsung muncul di semua HP tanpa perlu kirim berkas!
+          </p>
+
+          <div id="supabase-config-form" style="display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 0.75rem;">
+            <div>
+              <label style="font-size: 0.8rem; font-weight: 700; color: #495057; display: block; margin-bottom: 0.2rem;">Supabase Project URL:</label>
+              <input type="text" id="supabase-url-input" class="search-input" style="font-size: 0.88rem; padding: 0.5rem 0.75rem; width: 100%; box-sizing: border-box;" placeholder="https://xyzabcdefg.supabase.co">
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; font-weight: 700; color: #495057; display: block; margin-bottom: 0.2rem;">Supabase Anon / Public Key:</label>
+              <input type="password" id="supabase-key-input" class="search-input" style="font-size: 0.88rem; padding: 0.5rem 0.75rem; width: 100%; box-sizing: border-box;" placeholder="eyJhbGciOi...">
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="btn-paper btn-paper-primary" id="btn-save-supabase" style="flex: 1; justify-content: center; padding: 0.65rem; min-width: 140px;">
+                <span>💾</span>
+                <span>Simpan & Sambungkan</span>
+              </button>
+              <button class="btn-paper" id="btn-disconnect-supabase" style="padding: 0.65rem; color: #E03131; border-color: #FA5252; background: #FFF5F5; display: none;">
+                <span>Putuskan</span>
+              </button>
+            </div>
+          </div>
+
+          <button class="btn-paper btn-paper-accent" id="btn-sync-now-supabase" style="width: 100%; justify-content: center; padding: 0.75rem; font-size: 0.95rem; display: none;">
+            <span>🔄</span>
+            <span>Tarik Data Rekaman Terbaru dari Cloud</span>
+          </button>
+          <div id="supabase-sync-status" style="font-size: 0.85rem; font-weight: 700; text-align: center; margin-top: 0.5rem; display: none; padding: 0.4rem; border-radius: 8px;"></div>
+        </div>
+
         <!-- Sync to Web Folder (Default for All Devices) -->
         <div style="background: #E8F4FD; border: 2.5px solid #1971C2; border-radius: 16px; padding: 1.15rem; box-shadow: 0 4px 0 #1971C2;">
           <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">

@@ -12,6 +12,8 @@ class WordRepository {
 
   async init() {
     try {
+      // Pull latest custom words and audio meta from Supabase if connected
+      await audioStorage.syncAllFromSupabase().catch(() => {});
       const customWords = await audioStorage.getAllCustomWords();
       if (customWords && customWords.length > 0) {
         // Merge: Replace defaults if id matches, otherwise append custom words
