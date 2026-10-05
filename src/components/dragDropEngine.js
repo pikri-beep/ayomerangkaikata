@@ -3,7 +3,7 @@
 // Provides real-time phonics sound looping, bouncy physics, and snapping feedback
 
 import { audioEngine } from '../services/audioEngine.js';
-import { createMonsterSVG } from './monsterFactory.js';
+import { createMonsterSVG, createSlotContent } from './monsterFactory.js';
 
 export class DragDropEngine {
   constructor(options = {}) {
@@ -49,7 +49,7 @@ export class DragDropEngine {
 
   /**
    * Scatters letter cards organically across the play desk
-   * Uses a grid-based layout with organic jitter so letters never overlap
+   * Uses an adaptive grid-based layout with organic jitter so letters never overlap or overflow
    */
   scatterLetters() {
     if (!this.trayEl) return;
@@ -60,21 +60,45 @@ export class DragDropEngine {
     const deskW = rect.width > 0 ? rect.width : (this.trayEl.clientWidth || 360);
     const deskH = rect.height > 0 ? rect.height : (this.trayEl.clientHeight || 280);
 
-    const cardW = Math.min(80, Math.max(56, deskW * 0.16));
-    const cardH = cardW * 1.15;
-    const pad = 14;
-
+    const pad = Math.max(6, Math.min(12, deskH * 0.04));
     const n = cards.length;
-    // Strict grid so cards never overlap: distribute cells evenly
-    const cols = Math.max(1, Math.min(n, Math.floor((deskW - pad * 2) / (cardW + 10))));
-    const rows = Math.ceil(n / cols);
+
+    // Detect bottom edge of mission card so initial scatter stays in "Tempat Huruf"
+    const missionCard = document.querySelector('.word-mission-card');
+    let startY = pad;
+    if (missionCard) {
+      const mRect = missionCard.getBoundingClientRect();
+      startY = Math.max(pad, Math.round(mRect.bottom - rect.top + 6));
+    } else {
+      startY = Math.round(deskH * 0.38);
+    }
+    const availableH = Math.max(70, deskH - startY - pad);
+
+    // Distribute columns and rows smartly based on aspect ratio
+    const isWide = deskW / availableH > 1.8;
+    let cols = isWide
+      ? Math.max(1, Math.min(n, Math.floor((deskW - pad * 2) / 52)))
+      : Math.max(1, Math.min(n, Math.floor((deskW - pad * 2) / 64)));
+    let rows = Math.ceil(n / cols);
+
+    const maxWPerCard = Math.floor((deskW - pad * 2) / cols) - 6;
+    const maxHPerCard = Math.floor((availableH - pad) / rows) - 6;
+
+    // Standard card aspect ratio is ~1 : 1.15
+    let cardW = Math.min(78, Math.max(38, Math.min(maxWPerCard, maxHPerCard / 1.15)));
+    let cardH = Math.round(cardW * 1.15);
+
+    if (cardH > maxHPerCard && maxHPerCard > 26) {
+      cardH = maxHPerCard;
+      cardW = Math.round(cardH / 1.15);
+    }
 
     const cellW = (deskW - pad * 2) / cols;
-    const cellH = Math.max(cardH + 8, (deskH - pad * 2) / rows);
+    const cellH = Math.max(cardH + 4, (availableH - pad) / rows);
 
     // Max jitter is half of remaining space in each cell, clamped so cards stay inside cell
-    const maxJitterX = Math.max(0, (cellW - cardW) / 2 - 4);
-    const maxJitterY = Math.max(0, (cellH - cardH) / 2 - 4);
+    const maxJitterX = Math.max(0, (cellW - cardW) / 2 - 3);
+    const maxJitterY = Math.max(0, (cellH - cardH) / 2 - 3);
 
     cards.forEach((card, idx) => {
       const col = idx % cols;
@@ -84,8 +108,10 @@ export class DragDropEngine {
       const jitterY = (Math.random() - 0.5) * 2 * maxJitterY;
 
       const posX = Math.max(pad, Math.min(deskW - cardW - pad, pad + col * cellW + (cellW - cardW) / 2 + jitterX));
-      const posY = Math.max(pad, Math.min(deskH - cardH - pad, pad + row * cellH + (cellH - cardH) / 2 + jitterY));
+      const posY = Math.max(startY, Math.min(deskH - cardH - pad, startY + row * cellH + (cellH - cardH) / 2 + jitterY));
 
+      card.style.width = `${cardW}px`;
+      card.style.height = `${cardH}px`;
       card.style.position = 'absolute';
       card.style.left = `${posX}px`;
       card.style.top = `${posY}px`;
@@ -109,25 +135,49 @@ export class DragDropEngine {
     const deskW = rect.width > 0 ? rect.width : (this.trayEl.clientWidth || 360);
     const deskH = rect.height > 0 ? rect.height : (this.trayEl.clientHeight || 280);
 
-    const cardW = Math.min(80, Math.max(56, deskW * 0.16));
-    const cardH = cardW * 1.15;
-    const pad = 14;
-
+    const pad = Math.max(6, Math.min(12, deskH * 0.04));
     const n = cards.length;
-    const cols = Math.max(1, Math.min(n, Math.floor((deskW - pad * 2) / (cardW + 10))));
-    const rows = Math.ceil(n / cols);
+
+    const missionCard = document.querySelector('.word-mission-card');
+    let startY = pad;
+    if (missionCard) {
+      const mRect = missionCard.getBoundingClientRect();
+      startY = Math.max(pad, Math.round(mRect.bottom - rect.top + 6));
+    } else {
+      startY = Math.round(deskH * 0.38);
+    }
+    const availableH = Math.max(70, deskH - startY - pad);
+
+    const isWide = deskW / availableH > 1.8;
+    let cols = isWide
+      ? Math.max(1, Math.min(n, Math.floor((deskW - pad * 2) / 52)))
+      : Math.max(1, Math.min(n, Math.floor((deskW - pad * 2) / 64)));
+    let rows = Math.ceil(n / cols);
+
+    const maxWPerCard = Math.floor((deskW - pad * 2) / cols) - 6;
+    const maxHPerCard = Math.floor((availableH - pad) / rows) - 6;
+
+    let cardW = Math.min(78, Math.max(38, Math.min(maxWPerCard, maxHPerCard / 1.15)));
+    let cardH = Math.round(cardW * 1.15);
+
+    if (cardH > maxHPerCard && maxHPerCard > 26) {
+      cardH = maxHPerCard;
+      cardW = Math.round(cardH / 1.15);
+    }
 
     const cellW = (deskW - pad * 2) / cols;
-    const cellH = Math.max(cardH + 8, (deskH - pad * 2) / rows);
+    const cellH = Math.max(cardH + 4, (availableH - pad) / rows);
 
     cards.forEach((card, idx) => {
       const col = idx % cols;
       const row = Math.floor(idx / cols);
 
       const posX = pad + col * cellW + (cellW - cardW) / 2;
-      const posY = pad + row * cellH + (cellH - cardH) / 2;
+      const posY = startY + row * cellH + (cellH - cardH) / 2;
 
-      card.style.transition = 'transform 0.25s ease, left 0.25s ease, top 0.25s ease';
+      card.style.transition = 'transform 0.25s ease, left 0.25s ease, top 0.25s ease, width 0.25s ease, height 0.25s ease';
+      card.style.width = `${cardW}px`;
+      card.style.height = `${cardH}px`;
       card.style.position = 'absolute';
       card.style.left = `${posX}px`;
       card.style.top = `${posY}px`;
@@ -245,21 +295,9 @@ export class DragDropEngine {
 
         // Clear slot highlights
         this.targetSlots.forEach(s => s.el && s.el.classList.remove('slot-hover-snap'));
-        this.activeSlot = null;
 
         if (upEvt) {
-          const moveDist = Math.hypot(upEvt.clientX - downX, upEvt.clientY - downY);
-          const duration = Date.now() - downTime;
-
-          // TAP-TO-PLACE: If child just tapped (<12px movement, <380ms)
-          if (moveDist < 12 && duration < 380) {
-            const targetSlot = this.targetSlots.find(s => !s.isFilled && s.expectedLetter === letter);
-            if (targetSlot) {
-              this.snapCardToSlot(monsterEl, targetSlot, letter);
-              return;
-            }
-          }
-
+          // Direct drag-and-drop: NO TAP-TO-PLACE (trains child's fine motor skills)
           this.handleDrop(upEvt.clientX, upEvt.clientY, letter, monsterEl);
         } else {
           this._restoreCard(monsterEl);
@@ -283,15 +321,18 @@ export class DragDropEngine {
   createDragGhost(letter, x, y, initialAngle = 0) {
     if (this.dragGhost) this.dragGhost.remove();
 
+    const w = this.originRect ? Math.round(this.originRect.width) : 74;
+    const h = this.originRect ? Math.round(this.originRect.height) : Math.round(w * 1.15);
+
     const ghost = document.createElement('div');
     ghost.className = 'monster-drag-ghost paper-lifted paper-drag-lifted';
     ghost.style.position = 'fixed';
     ghost.style.left = '0px';
     ghost.style.top = '0px';
     ghost.style.willChange = 'transform';
-    ghost.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%) scale(1.12) rotate(${initialAngle}deg)`;
-    ghost.style.width = '96px';
-    ghost.style.height = '96px';
+    ghost.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%) scale(1.1) rotate(${initialAngle}deg)`;
+    ghost.style.width = `${w}px`;
+    ghost.style.height = `${h}px`;
     ghost.style.pointerEvents = 'none';
     ghost.style.zIndex = '9999';
     ghost.innerHTML = createMonsterSVG(letter, { state: 'dragging' });
@@ -302,7 +343,8 @@ export class DragDropEngine {
 
   checkSlotProximity(clientX, clientY, letter) {
     let hoveredSlot = null;
-    let minDistance = 85;
+    const isSmallScreen = window.innerWidth <= 768 || window.innerHeight <= 500;
+    let minDistance = isSmallScreen ? 60 : 85;
 
     if (!this._cachedSlotRects) return;
 
@@ -360,14 +402,16 @@ export class DragDropEngine {
 
   _createQuickGhost(monsterEl, letter) {
     const rect = monsterEl.getBoundingClientRect();
+    const w = Math.round(rect.width) || 74;
+    const h = Math.round(rect.height) || Math.round(w * 1.15);
     const ghost = document.createElement('div');
     ghost.className = 'monster-drag-ghost paper-sticking';
     ghost.style.position = 'fixed';
     ghost.style.left = '0px';
     ghost.style.top = '0px';
     ghost.style.transform = `translate3d(${rect.left + rect.width / 2}px, ${rect.top + rect.height / 2}px, 0) translate(-50%, -50%) scale(1)`;
-    ghost.style.width = '84px';
-    ghost.style.height = '84px';
+    ghost.style.width = `${w}px`;
+    ghost.style.height = `${h}px`;
     ghost.style.pointerEvents = 'none';
     ghost.style.zIndex = '9999';
     ghost.innerHTML = createMonsterSVG(letter, { state: 'dragging' });
@@ -393,7 +437,7 @@ export class DragDropEngine {
     if (!slot || !slot.isFilled) return;
 
     slot.isFilled = false;
-    slot.el.innerHTML = `<span class="slot-placeholder">${slot.expectedLetter}</span>`;
+    slot.el.innerHTML = createSlotContent(slot.expectedLetter);
     slot.el.classList.remove('slot-filled', 'paper-stuck');
 
     const monsterEl = slot.filledMonsterEl;
@@ -434,14 +478,38 @@ export class DragDropEngine {
 
   handleDrop(clientX, clientY, letter, monsterEl) {
     // Clear slot highlights
-    this.targetSlots.forEach(s => s.el.classList.remove('slot-hover-snap'));
+    this.targetSlots.forEach(s => s.el && s.el.classList.remove('slot-hover-snap'));
 
-    if (this.activeSlot && !this.activeSlot.isFilled && this.activeSlot.expectedLetter === letter) {
-      this.snapCardToSlot(monsterEl, this.activeSlot, letter);
-    } else {
-      // FREE DROP — letter lands where the child released it on the play table
-      audioEngine.playPaperLand();
+    // Check if dropped near or over any unfilled matching slot (generous radius for child motorics)
+    let matchedSlot = null;
+    let minDistance = 85;
+
+    for (const slot of this.targetSlots) {
+      if (slot.isFilled || slot.expectedLetter !== letter || !slot.el) continue;
+      const rect = slot.el.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+
+      // Check geometric overlap with 35px padding or radial distance
+      const isInside = clientX >= (rect.left - 35) && clientX <= (rect.right + 35) &&
+                       clientY >= (rect.top - 35) && clientY <= (rect.bottom + 35);
+      const dist = Math.hypot(clientX - centerX, clientY - centerY);
+
+      if (isInside || dist < minDistance) {
+        matchedSlot = slot;
+        minDistance = dist;
+      }
+    }
+
+    if (matchedSlot) {
       this.activeSlot = null;
+      this.snapCardToSlot(monsterEl, matchedSlot, letter);
+      return;
+    }
+
+    // FREE DROP — letter lands where the child released it on the full white play table
+    audioEngine.playPaperLand();
+    this.activeSlot = null;
 
       const trayRect = this.trayEl.getBoundingClientRect();
       const cardW = monsterEl.offsetWidth || 76;
@@ -450,10 +518,10 @@ export class DragDropEngine {
       let newX = clientX - trayRect.left - cardW / 2;
       let newY = clientY - trayRect.top - cardH / 2;
 
-      // Clamp so the letter never gets lost off-screen
-      newX = Math.max(10, Math.min(trayRect.width - cardW - 10, newX));
-      newY = Math.max(10, Math.min(trayRect.height - cardH - 10, newY));
-      const dropRot = (Math.random() - 0.5) * 24; // natural resting paper angle
+      // Clamp so the letter never gets lost outside the arena bounds
+      newX = Math.max(6, Math.min(trayRect.width - cardW - 6, newX));
+      newY = Math.max(6, Math.min(trayRect.height - cardH - 6, newY));
+      const dropRot = (Math.random() - 0.5) * 16; // natural resting paper angle
 
       const applyPosition = () => {
         monsterEl.style.position = 'absolute';
@@ -480,7 +548,6 @@ export class DragDropEngine {
       } else {
         applyPosition();
       }
-    }
   }
 
   spawnSparkleParticles(x, y) {

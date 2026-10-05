@@ -140,7 +140,7 @@ export class StickerBook {
 
       if (isUnlocked) {
         card.innerHTML = `
-          <div class="card-status-badge">✅ Terkumpul</div>
+          <div class="card-status-badge">✅ Terbuka</div>
           <div class="card-sticker-illustration">
             <img src="${wordItem.image}" alt="${wordItem.word}" class="card-diecut-img" loading="lazy" decoding="async">
           </div>
@@ -178,7 +178,7 @@ export class StickerBook {
 
       } else {
         card.innerHTML = `
-          <div class="card-status-badge locked-status">🔒 Belum Terbuka</div>
+          <div class="card-status-badge locked-status">🔒 Terkunci</div>
           <div class="card-sticker-illustration silhouette-box">
             <span class="locked-big-icon">🔒</span>
           </div>

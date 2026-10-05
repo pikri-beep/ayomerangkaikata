@@ -3,7 +3,7 @@ import './style.css';
 import { wordRepository } from './services/wordRepository.js';
 import { audioEngine } from './services/audioEngine.js';
 import { parentalLock } from './services/parentalLock.js';
-import { createMonsterElement, createMonsterSVG } from './components/monsterFactory.js';
+import { createMonsterElement, createMonsterSVG, createSlotContent } from './components/monsterFactory.js';
 import { DragDropEngine } from './components/dragDropEngine.js';
 import { VignetteTheater } from './components/vignetteTheater.js';
 import { StickerBook } from './components/stickerBook.js';
@@ -63,6 +63,8 @@ class MonsterPhonicsApp {
     this.progressTagEl = document.getElementById('mission-progress-tag');
     this.hintTextEl = document.getElementById('mission-hint');
     this.hintBoxEl = document.querySelector('.mission-hint-box');
+    this.btnHintBulb = document.getElementById('btn-hint-bulb');
+    this.btnHintCloseMini = document.getElementById('btn-hint-close-mini');
     this.targetFrameEl = document.getElementById('target-word-frame');
     this.trayEl = document.getElementById('monster-tray');
     this.btnPrevWord = document.getElementById('btn-prev-word');
@@ -207,7 +209,7 @@ class MonsterPhonicsApp {
 
     if (this.btnResetProgress) {
       this.btnResetProgress.addEventListener('click', () => {
-        if (confirm('Ulangi permainan dari awal? Semua koleksi stiker diorama akan direset.')) {
+        if (confirm('Ulangi permainan dari awal? Semua koleksi stiker album akan direset.')) {
           localStorage.removeItem('monster_phonics_completed_words');
           localStorage.removeItem('monster_phonics_diorama_stickers');
           this.currentWordIndex = 0;
@@ -291,14 +293,67 @@ class MonsterPhonicsApp {
       }
     });
 
-    // Re-scatter on window resize / mobile device orientation change
+    // Hint Bulb Toggle & Narration
+    const toggleHint = () => {
+      audioEngine.playPaperGrab();
+      if (this.hintBoxEl) {
+        const isVisible = this.hintBoxEl.classList.toggle('is-visible');
+        if (isVisible && this.currentWordData?.hint) {
+          audioEngine.speakText(this.currentWordData.hint);
+        }
+      }
+    };
+
+    if (this.btnHintBulb) {
+      this.btnHintBulb.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleHint();
+      });
+    }
+
+    if (this.hintBoxEl) {
+      this.hintBoxEl.addEventListener('click', (e) => {
+        if (e.target.closest('#btn-hint-close-mini')) {
+          e.stopPropagation();
+          audioEngine.playPaperGrab();
+          this.hintBoxEl.classList.remove('is-visible');
+        } else {
+          // Tap hint bubble to repeat speech
+          if (this.currentWordData?.hint) {
+            audioEngine.speakText(this.currentWordData.hint);
+          }
+        }
+      });
+    }
+
+    // Dismiss mobile hint popover when tapping anywhere outside
+    document.addEventListener('pointerdown', (e) => {
+      if (this.hintBoxEl && this.hintBoxEl.classList.contains('is-visible')) {
+        if (!this.hintBoxEl.contains(e.target) && !this.btnHintBulb?.contains(e.target)) {
+          this.hintBoxEl.classList.remove('is-visible');
+        }
+      }
+    });
+
+    // Re-scatter letters on window resize & mobile device orientation change
     let resizeTimer;
-    window.addEventListener('resize', () => {
+    const handleOrientationOrResize = () => {
       clearTimeout(resizeTimer);
       resizeTimer = setTimeout(() => {
-        this.dragDropEngine.scatterLetters();
-      }, 150);
-    });
+        if (this.dragDropEngine) {
+          this.dragDropEngine.scatterLetters();
+        }
+      }, 120);
+    };
+
+    window.addEventListener('resize', handleOrientationOrResize);
+    window.addEventListener('orientationchange', handleOrientationOrResize);
+    if (window.screen?.orientation) {
+      window.screen.orientation.addEventListener('change', handleOrientationOrResize);
+    }
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleOrientationOrResize);
+    }
 
     // First user gesture audio context unlock
     const unlockAudio = () => {
@@ -393,6 +448,9 @@ class MonsterPhonicsApp {
       this.progressTagEl.textContent = `${this.currentWordIndex + 1} / ${words.length} ⭐`;
     }
     this.hintTextEl.textContent = wordData.hint;
+    if (this.hintBoxEl) {
+      this.hintBoxEl.classList.remove('is-visible');
+    }
 
     // Clear Target Frame & Tray
     this.targetFrameEl.innerHTML = '';
@@ -407,7 +465,7 @@ class MonsterPhonicsApp {
       slotEl.className = 'target-letter-slot';
       slotEl.setAttribute('data-slot-index', idx);
       slotEl.setAttribute('data-expected', char);
-      slotEl.innerHTML = `<span class="slot-placeholder">${char}</span>`;
+      slotEl.innerHTML = createSlotContent(char);
 
       this.targetFrameEl.appendChild(slotEl);
 

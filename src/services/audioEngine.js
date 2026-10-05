@@ -20,8 +20,10 @@ class AudioEngine {
     this.currentPlayingAudio = null;
     this.speechSynth = typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null;
     this.idVoice = null;
+    this.bundledManifest = null;
     this._speakGeneration = 0; // increments each call to abort stale sequences
     this.initVoices();
+    this.initBundledAudio();
   }
 
   ensureContext() {
@@ -49,6 +51,44 @@ class AudioEngine {
     if (this.speechSynth.onvoiceschanged !== undefined) {
       this.speechSynth.onvoiceschanged = findVoice;
     }
+  }
+
+  async initBundledAudio() {
+    this.bundledManifest = null;
+    try {
+      const res = await fetch('/audio/manifest.json');
+      if (res.ok) {
+        this.bundledManifest = await res.json();
+      }
+    } catch (_) {
+      this.bundledManifest = null;
+    }
+  }
+
+  getBundledAudioUrl(key) {
+    if (!this.bundledManifest) return null;
+    if (key.startsWith('letter_')) {
+      const char = key.replace('letter_', '').toUpperCase();
+      return this.bundledManifest.letters?.[char] || null;
+    }
+    if (key.startsWith('word_')) {
+      const id = key.replace('word_', '').toLowerCase();
+      return this.bundledManifest.words?.[id] || null;
+    }
+    if (key.startsWith('meaning_')) {
+      const id = key.replace('meaning_', '').toLowerCase();
+      return this.bundledManifest.meanings?.[id] || null;
+    }
+    return null;
+  }
+
+  async hasAudio(key) {
+    // 1. Check local IndexedDB first
+    const hasLocal = await audioStorage.hasAudio(key);
+    if (hasLocal) return true;
+    // 2. Check bundled static files from manifest
+    if (this.getBundledAudioUrl(key)) return true;
+    return false;
   }
 
   stopAllSpeech() {
@@ -101,33 +141,50 @@ class AudioEngine {
   async playCustomAudio(key) {
     if (this.isMuted) return false;
     try {
+      let audioUrl = null;
+      let isObjectUrl = false;
+
+      // 1. Check local IndexedDB first
       const blob = await audioStorage.getAudio(key);
-      if (!blob) return false;
+      if (blob) {
+        audioUrl = URL.createObjectURL(blob);
+        isObjectUrl = true;
+      } else {
+        // 2. Check bundled static audio
+        const bundled = this.getBundledAudioUrl(key);
+        if (bundled) {
+          audioUrl = bundled;
+        }
+      }
+
+      if (!audioUrl) return false;
 
       return new Promise((resolve) => {
         this.stopCurrentPlayingAudio();
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
+        const audio = new Audio(audioUrl);
         this.currentPlayingAudio = audio;
 
-        audio.onended = () => {
-          URL.revokeObjectURL(url);
+        const cleanup = () => {
+          if (isObjectUrl) {
+            try { URL.revokeObjectURL(audioUrl); } catch (_) {}
+          }
           if (this.currentPlayingAudio === audio) {
             this.currentPlayingAudio = null;
           }
+        };
+
+        audio.onended = () => {
+          cleanup();
           resolve(true);
         };
 
         audio.onerror = () => {
-          URL.revokeObjectURL(url);
-          if (this.currentPlayingAudio === audio) {
-            this.currentPlayingAudio = null;
-          }
+          cleanup();
           resolve(false);
         };
 
         audio.play().catch(() => {
-          URL.revokeObjectURL(url);
+          cleanup();
           resolve(false);
         });
       });
@@ -738,7 +795,7 @@ class AudioEngine {
   }
 
 
-  // --- Real-time Phonics Drag Chanting ---
+  // --- Real-time Phonics Drag Chanting (Looping for Child Speech Training) ---
 
   startPhonicsChant(letter) {
     if (this.isMuted) return;
@@ -748,37 +805,63 @@ class AudioEngine {
     this.currentChantingLetter = letter.toUpperCase();
     const info = LETTER_PHONICS_MAP[this.currentChantingLetter] || { chant: letter, sound: letter };
 
-    // 1. Instant, ultra-lightweight melodic chirp via Web Audio (0 CPU lag / 60fps smooth)
-    if (this.ctx) {
-      const now = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      const baseFreq = 340 + (this.currentChantingLetter.charCodeAt(0) - 65) * 16;
-      osc.frequency.setValueAtTime(baseFreq, now);
-      osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.25, now + 0.12);
+    const playOneChant = async () => {
+      if (this.isMuted || !this.currentChantingLetter) return;
 
-      gain.gain.setValueAtTime(0.18, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+      // 1. Play cute melodic chirp sound via Web Audio
+      if (this.ctx) {
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          const baseFreq = 340 + (this.currentChantingLetter.charCodeAt(0) - 65) * 16;
+          osc.frequency.setValueAtTime(baseFreq, now);
+          osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.25, now + 0.12);
 
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.18);
-    }
+          gain.gain.setValueAtTime(0.18, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
 
-    // 2. Play speech phonics ONCE on pickup (only if enabled, never in a continuous loop!)
-    if (this.speechEnabled && this.speechSynth && !this.speechSynth.speaking) {
-      try {
-        const utter = new SpeechSynthesisUtterance(info.sound || letter);
-        utter.lang = 'id-ID';
-        if (this.idVoice) utter.voice = this.idVoice;
-        utter.pitch = 1.4;
-        utter.rate = 1.2;
-        utter.volume = 0.85;
-        this.speechSynth.speak(utter);
-      } catch (_) {}
-    }
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.18);
+        } catch (_) {}
+      }
+
+      // 2. Play custom letter audio if available, else speech synthesis chant
+      const hasCustomLetter = await this.hasAudio('letter_' + this.currentChantingLetter);
+      if (!this.currentChantingLetter) return; // stopped while waiting for async storage
+
+      if (hasCustomLetter) {
+        await this.playCustomAudio('letter_' + this.currentChantingLetter);
+      } else if (this.speechEnabled && this.speechSynth) {
+        try {
+          if (this.speechSynth.speaking) {
+            this.speechSynth.cancel();
+          }
+          const utter = new SpeechSynthesisUtterance(info.sound || letter);
+          utter.lang = 'id-ID';
+          if (this.idVoice) utter.voice = this.idVoice;
+          utter.pitch = 1.35;
+          utter.rate = 1.15;
+          utter.volume = 0.9;
+          this.speechSynth.speak(utter);
+        } catch (_) {}
+      }
+    };
+
+    // Immediate first chant
+    playOneChant();
+
+    // Loop every 850ms while dragging to train child speech imitation!
+    this.phonicsInterval = setInterval(() => {
+      if (this.currentChantingLetter) {
+        playOneChant();
+      } else {
+        this.stopPhonicsChant();
+      }
+    }, 850);
   }
 
   stopPhonicsChant() {
@@ -787,6 +870,12 @@ class AudioEngine {
       this.phonicsInterval = null;
     }
     this.currentChantingLetter = null;
+    if (this.speechSynth && !this.isPlayingWordNarration) {
+      try {
+        this.speechSynth.cancel();
+      } catch (_) {}
+    }
+    this.stopCurrentPlayingAudio();
   }
 
   // --- Word Phonics Spelling & Definition Reading ---
@@ -821,7 +910,7 @@ class AudioEngine {
         if (onLetterStep) onLetterStep(currentIndex);
         this.playLetterChime(char);
 
-        const hasCustomLetter = await audioStorage.hasAudio('letter_' + char);
+        const hasCustomLetter = await this.hasAudio('letter_' + char);
         if (isStale()) return;
 
         if (hasCustomLetter) {
@@ -860,14 +949,14 @@ class AudioEngine {
           if (onLetterStep) onLetterStep(-1); // reset highlights
           this.playWordCelebration();
 
-          const hasCustomWord = await audioStorage.hasAudio('word_' + wordData.id);
+          const hasCustomWord = await this.hasAudio('word_' + wordData.id);
           if (isStale()) return;
 
           const proceedToMeaning = () => {
             // Step 3: Speak friendly meaning
             setTimeout(async () => {
               if (isStale()) return;
-              const hasCustomMeaning = await audioStorage.hasAudio('meaning_' + wordData.id);
+              const hasCustomMeaning = await this.hasAudio('meaning_' + wordData.id);
               if (isStale()) return;
               if (hasCustomMeaning) {
                 await this.playCustomAudio('meaning_' + wordData.id);

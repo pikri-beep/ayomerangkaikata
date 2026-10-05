@@ -648,3 +648,11 @@ export function createMonsterElement(letter, state = 'idle') {
   container.innerHTML = createMonsterSVG(letter, { state });
   return container;
 }
+
+/**
+ * Creates HTML string for an empty target letter slot showing a soft guide watermark letter
+ */
+export function createSlotContent(letter) {
+  const char = (letter || 'A').toUpperCase();
+  return `<span class="slot-placeholder">${char}</span>`;
+}

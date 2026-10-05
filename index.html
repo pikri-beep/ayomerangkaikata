@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Ayo Merangkai Kata - Belajar Mengeja Papercraft & Doodle</title>
   <meta name="description" content="Aplikasi edukasi interaktif merangkai kata dan ejaan fonik bertema papercraft doodle untuk anak-anak. Ceria, ramah anak, dan bermain di atas kertas gambar!">
 
@@ -39,20 +39,28 @@
 
       <div class="menu-button-list">
         <button class="btn-menu-action btn-menu-play" id="btn-menu-play" aria-label="Mulai Bermain">
-          <span>▶️</span>
-          <span>Mulai Bermain</span>
+          <span class="btn-menu-icon play-icon">▶️</span>
+          <div class="btn-menu-text-wrap">
+            <span class="btn-menu-title">Mulai Bermain</span>
+            <span class="btn-menu-subtitle">Mengeja Kata & Buka Koleksi</span>
+          </div>
+          <span class="btn-menu-flair">✨</span>
         </button>
-        <button class="btn-menu-action btn-menu-album" id="btn-menu-album" aria-label="Buka Album Stiker">
-          <span>📒</span>
-          <span>Album Diorama Stiker</span>
-        </button>
-        <button class="btn-menu-action btn-menu-settings" id="btn-menu-settings" aria-label="Pengaturan">
-          <span>⚙️</span>
-          <span>Pengaturan</span>
-        </button>
+
+        <div class="menu-button-grid-row">
+          <button class="btn-menu-action btn-menu-album" id="btn-menu-album" aria-label="Buka Album Stiker">
+            <span class="btn-menu-icon">📒</span>
+            <span class="btn-menu-title">Album Stiker</span>
+          </button>
+          <button class="btn-menu-action btn-menu-settings" id="btn-menu-settings" aria-label="Pengaturan">
+            <span class="btn-menu-icon">⚙️</span>
+            <span class="btn-menu-title">Pengaturan</span>
+          </button>
+        </div>
+
         <button class="btn-menu-action btn-menu-parent" id="btn-menu-parent" aria-label="Studio Orang Tua">
-          <span>🔒</span>
-          <span>Studio Orang Tua & Rekaman</span>
+          <span class="btn-menu-icon">🔒</span>
+          <span class="btn-menu-title">Studio Orang Tua & Rekaman</span>
         </button>
       </div>
     </div>
@@ -83,9 +91,9 @@
     </div>
   </header>
 
-  <!-- Main Game Arena -->
-  <main class="game-arena">
-    <!-- Word Target Mission Card (Paper Notebook Sheet with Washi Tape) -->
+  <!-- Main Game Arena (Unified Play Desk) -->
+  <main class="game-arena" id="game-arena">
+    <!-- Tempat Naruh: Papan Kata Target (Paper Notebook Stencil) -->
     <section class="word-mission-card" aria-label="Area Ejaan Kata Target">
       <!-- Washi tape papercraft accent -->
       <div class="washi-tape" aria-hidden="true"></div>
@@ -94,17 +102,30 @@
         <div class="mission-meta-left">
           <span class="mission-category" id="mission-category">🐱 Hewan</span>
           <span class="mission-progress-tag" id="mission-progress-tag">1 / 17 ⭐</span>
+          <!-- Mobile hint toggle button (compact 💡) -->
+          <button type="button" class="btn-hint-bulb" id="btn-hint-bulb" aria-label="Lihat Petunjuk Kata" title="Lihat Petunjuk Kata">
+            <span class="hint-icon">💡</span>
+            <span class="hint-btn-text">Petunjuk</span>
+          </button>
         </div>
-        <div class="word-navigator">
-          <button class="nav-arrow-btn" id="btn-prev-word" aria-label="Kata Sebelumnya" title="Kata Sebelumnya">◀</button>
-          <button class="nav-arrow-btn" id="btn-next-word-top" aria-label="Kata Berikutnya" title="Kata Berikutnya">▶</button>
+
+        <div class="mission-meta-right">
+          <button class="btn-tidy-desk" id="btn-tidy-desk" title="Tata rapi huruf di meja" aria-label="Tata rapi huruf di meja">
+            <span>✨</span>
+            <span class="btn-tidy-label">Rapikan</span>
+          </button>
+          <div class="word-navigator">
+            <button class="nav-arrow-btn" id="btn-prev-word" aria-label="Kata Sebelumnya" title="Kata Sebelumnya">◀</button>
+            <button class="nav-arrow-btn" id="btn-next-word-top" aria-label="Kata Berikutnya" title="Kata Berikutnya">▶</button>
+          </div>
         </div>
       </div>
 
       <!-- Playful Clue / Hint Box (Yellow Sticky Post-it Note) -->
-      <div class="mission-hint-box">
+      <div class="mission-hint-box" id="mission-hint-box" role="region" aria-label="Petunjuk Kata">
         <span class="hint-icon" aria-hidden="true">💡</span>
         <span class="hint-text" id="mission-hint">Hewan berbulu yang suka mengeong</span>
+        <button type="button" class="btn-hint-close-mini" id="btn-hint-close-mini" aria-label="Tutup petunjuk">✕</button>
       </div>
 
       <!-- Target Slots (Where letter paper cutouts snap into place) -->
@@ -113,19 +134,13 @@
       </div>
     </section>
 
-    <!-- Monster Letters Play Desk (Free to Drag & Scattered Papercut Area) -->
-    <section class="tray-wrapper" aria-label="Meja Bermain Huruf">
-      <div class="tray-title-bar">
-        <span class="doodle-tray-hint">🖐️ Huruf berserakan di meja, geser atau ketuk ke kotak di atas!</span>
-        <button class="btn-tidy-desk" id="btn-tidy-desk" title="Tata rapi huruf di meja" aria-label="Tata rapi huruf di meja">
-          <span>✨</span>
-          <span>Rapikan Meja</span>
-        </button>
-      </div>
-      <div class="monster-tray scatter-play-desk" id="monster-tray" role="region" aria-label="Meja Bermain Huruf Bebas">
-        <!-- Dynamically injected scattered draggable monster letter elements -->
-      </div>
-    </section>
+    <!-- Subtle dashed divider separating target area and letters play area -->
+    <div class="arena-notebook-divider" aria-hidden="true"></div>
+
+    <!-- Arena-Wide Draggable Letters Layer (Children can place letters ANYWHERE!) -->
+    <div class="monster-tray scatter-play-desk" id="monster-tray" role="region" aria-label="Meja Bermain Huruf Bebas">
+      <!-- Dynamically injected scattered draggable monster letter elements -->
+    </div>
   </main>
 
   <!-- Vignette Theater Modal (Celebration, Cartoon Vignette, and Child Meaning) -->
@@ -218,6 +233,36 @@
       <button class="btn-paper btn-paper-primary" id="btn-save-settings" style="width: 100%; justify-content: center; font-size: 1.15rem; padding: 0.75rem;">
         <span>Selesai</span>
       </button>
+    </div>
+  </div>
+
+  <!-- Strict Rotate Device Overlay (Mobile Portrait Block) -->
+  <div id="rotate-device-overlay" class="rotate-device-overlay" role="dialog" aria-modal="true" aria-label="Instruksi Memiringkan Perangkat">
+    <div class="rotate-card animate-pop-in">
+      <div class="washi-tape" aria-hidden="true"></div>
+
+      <!-- Animated Rotating Phone Doodle -->
+      <div class="rotate-phone-anim" aria-hidden="true">
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <span class="phone-screen-monster">👾</span>
+            <span class="phone-screen-word">KATA</span>
+          </div>
+          <div class="phone-notch"></div>
+        </div>
+        <div class="rotate-curved-arrow">🔄</div>
+      </div>
+
+      <h2 class="rotate-title">Miringkan HP Kamu!</h2>
+      <p class="rotate-message">
+        Ayo putar HP ke posisi <strong>Mendatar (Landscape)</strong> agar huruf-huruf monster bisa disusun dengan leluasa! 🎨✨
+      </p>
+
+      <div class="rotate-guide-badges">
+        <span class="rotate-badge-pill">📱 Tegak ❌</span>
+        <span class="rotate-badge-arrow">➡️</span>
+        <span class="rotate-badge-pill active-landscape">📲 Miring ✅</span>
+      </div>
     </div>
   </div>
 

@@ -7,6 +7,15 @@ import { LETTER_PHONICS_MAP } from './data/words.js';
 import { parentalLock } from './services/parentalLock.js';
 import { getSlotForWord, saveCustomDioramaSlot } from './data/dioramaSlots.js';
 
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
 class AdminApp {
   constructor() {
     this.words = [];
@@ -360,6 +369,13 @@ class AdminApp {
       } else if (action === 'delete-audio') {
         if (confirm('Hapus rekaman suara ini dan gunakan kembali suara bawaan sistem?')) {
           await audioStorage.deleteAudio(audioKey);
+          try {
+            await fetch('/api/delete-audio', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ key: audioKey })
+            });
+          } catch (_) {}
           await this.refreshData();
         }
       }
@@ -392,6 +408,12 @@ class AdminApp {
     this.btnTriggerRestore.addEventListener('click', () => this.backupFileInput.click());
     this.backupFileInput.addEventListener('change', (e) => this.handleRestoreFile(e));
     this.btnResetDefaults.addEventListener('click', () => this.resetAllDefaults());
+
+    // Project-wide Audio Sync Event
+    const btnSyncProject = document.getElementById('btn-sync-audio-to-project');
+    if (btnSyncProject) {
+      btnSyncProject.addEventListener('click', () => this.syncAllAudioToProject());
+    }
   }
 
   // --- Voice Studio Logic ---
@@ -548,7 +570,18 @@ class AdminApp {
       : `${this.activeWord.word} (${this.currentRecordType === 'word' ? 'Sebut Kata' : 'Arti/Cerita'})`;
 
     await audioStorage.saveAudio(key, this.recorder.recordedBlob, label);
-    alert('🎉 Suara Anda berhasil disimpan! Aplikasi permainan akan otomatis memutar suara ini.');
+
+    // Also attempt saving directly to project public/audio/
+    try {
+      const dataUrl = await blobToDataUrl(this.recorder.recordedBlob);
+      await fetch('/api/save-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, dataUrl })
+      });
+    } catch (_) {}
+
+    alert('🎉 Suara Anda berhasil disimpan! Suara ini kini aktif di semua web.');
     this.closeStudio();
   }
 
@@ -564,7 +597,18 @@ class AdminApp {
       : `${this.activeWord.word} (${this.currentRecordType === 'word' ? 'Sebut Kata' : 'Arti/Cerita'})`;
 
     await audioStorage.saveAudio(key, file, label);
-    alert('🎉 Berkas audio berhasil disimpan dan siap diputar di dalam permainan!');
+
+    // Also attempt saving directly to project public/audio/
+    try {
+      const dataUrl = await blobToDataUrl(file);
+      await fetch('/api/save-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, dataUrl })
+      });
+    } catch (_) {}
+
+    alert('🎉 Berkas audio berhasil disimpan dan disinkronkan ke web!');
     this.closeStudio();
     this.audioFileInput.value = '';
   }
@@ -575,6 +619,13 @@ class AdminApp {
 
     if (confirm('Yakin ingin menghapus rekaman suara Anda dan kembali ke suara sistem?')) {
       await audioStorage.deleteAudio(key);
+      try {
+        await fetch('/api/delete-audio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key })
+        });
+      } catch (_) {}
       alert('Rekaman suara berhasil dihapus.');
       this.closeStudio();
     }
@@ -689,6 +740,70 @@ class AdminApp {
   }
 
   // --- Backup & Restore Logic ---
+
+  async syncAllAudioToProject() {
+    const statusEl = document.getElementById('sync-audio-status');
+    const btnSync = document.getElementById('btn-sync-audio-to-project');
+    if (statusEl) {
+      statusEl.style.display = 'block';
+      statusEl.style.color = '#1971C2';
+      statusEl.style.background = '#E7F5FF';
+      statusEl.textContent = '⏳ Membaca seluruh rekaman suara dan mengirim ke folder public/audio/...';
+    }
+    if (btnSync) btnSync.disabled = true;
+
+    try {
+      const metaList = await audioStorage.getAllAudioMetadata();
+      if (!metaList || metaList.length === 0) {
+        if (statusEl) {
+          statusEl.style.color = '#F59F00';
+          statusEl.style.background = '#FFF9DB';
+          statusEl.textContent = 'ℹ️ Belum ada rekaman suara di browser ini. Silakan rekam suara terlebih dahulu!';
+        }
+        if (btnSync) btnSync.disabled = false;
+        return;
+      }
+
+      const items = [];
+      for (const item of metaList) {
+        const blob = await audioStorage.getAudio(item.key);
+        if (blob) {
+          const dataUrl = await blobToDataUrl(blob);
+          items.push({
+            key: item.key,
+            dataUrl
+          });
+        }
+      }
+
+      const res = await fetch('/api/save-audio/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items })
+      });
+
+      if (!res.ok) {
+        throw new Error('Server mengembalikan status ' + res.status);
+      }
+
+      const data = await res.json();
+      if (statusEl) {
+        statusEl.style.color = '#2B8A3E';
+        statusEl.style.background = '#EBFBEE';
+        statusEl.textContent = `✅ Berhasil mensinkronkan ${data.savedCount || items.length} file audio ke public/audio/! Semua perangkat kini akan memutar suara Anda.`;
+      }
+      alert(`🎉 Sukses! ${data.savedCount || items.length} rekaman suara Anda telah tersimpan permanen di folder proyek web (public/audio/). Suara ini akan otomatis aktif di semua perangkat!`);
+    } catch (err) {
+      if (statusEl) {
+        statusEl.style.color = '#E03131';
+        statusEl.style.background = '#FFF5F5';
+        statusEl.textContent = `❌ Gagal sinkronisasi: ${err.message}. Pastikan server lokal sedang aktif.`;
+      }
+      alert(`Gagal mensinkronkan: ${err.message}`);
+    } finally {
+      if (btnSync) btnSync.disabled = false;
+    }
+  }
 
   async downloadBackup() {
     try {

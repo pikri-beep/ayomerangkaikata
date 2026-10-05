@@ -68,9 +68,9 @@
           <span>➕</span>
           <span>Tambah Kata</span>
         </button>
-        <button class="btn-paper" id="btn-open-backup" title="Cadangkan atau Pulihkan Data">
+        <button class="btn-paper" id="btn-open-backup" title="Cadangkan atau Sinkronkan Suara ke Web">
           <span>💾</span>
-          <span>Cadangan</span>
+          <span>Cadangan & Sinkron Web</span>
         </button>
         <button class="btn-paper" id="btn-lock-session" title="Kunci Kembali Halaman Ini" style="color: #495057;">
           <span>🔒</span>
@@ -322,6 +322,24 @@
       <p class="modal-subtitle">Simpan seluruh kata dan rekaman suara Anda ke file agar tidak hilang.</p>
 
       <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <!-- Sync to Web Folder (Default for All Devices) -->
+        <div style="background: #E8F4FD; border: 2.5px solid #1971C2; border-radius: 16px; padding: 1.15rem; box-shadow: 0 4px 0 #1971C2;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+            <span style="font-size: 1.5rem;">🌐</span>
+            <h3 style="margin: 0; font-size: 1.2rem; color: #1864AB;">Jadikan Suara Bawaan Web (Semua HP/Laptop)</h3>
+          </div>
+          <p style="margin: 0 0 0.85rem; font-size: 0.92rem; color: #1971C2; line-height: 1.35;">
+            Sinkronkan semua rekaman suara dari browser ini langsung ke aset web (<code>public/audio/</code>). Suara ini otomatis terdengar sama di semua HP, tablet, dan saat web di-deploy online!
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <button class="btn-paper btn-paper-primary" id="btn-sync-audio-to-project" style="width: 100%; justify-content: center; font-size: 1.05rem; padding: 0.85rem;">
+              <span>⚡</span>
+              <span>Sinkronkan Semua Rekaman ke Web</span>
+            </button>
+            <div id="sync-audio-status" style="font-size: 0.9rem; font-weight: 700; text-align: center; display: none; padding: 0.4rem; border-radius: 8px;"></div>
+          </div>
+        </div>
+
         <div style="background: #EBFBEE; border: 2px solid #51CF66; border-radius: 14px; padding: 1rem;">
           <h3 style="margin: 0 0 0.4rem; font-size: 1.15rem;">📥 Unduh Cadangan</h3>
           <p style="margin: 0 0 0.75rem; font-size: 0.92rem; color: #2B8A3E;">Ekspor seluruh kata buatan Anda beserta file rekaman suara ke berkas cadangan JSON.</p>
