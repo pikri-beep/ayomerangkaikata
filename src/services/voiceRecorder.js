@@ -47,7 +47,7 @@ export class VoiceRecorder {
     return '';
   }
 
-  async startRecording() {
+  async startRecording(maxDurationSec = 0) {
     if (!this.isSupported()) {
       throw new Error('Perekaman mikrofon tidak didukung di browser ini.');
     }
