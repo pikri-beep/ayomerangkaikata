@@ -3932,6 +3932,267 @@ body::after {
 }
 
 /* ==========================================================
+   MAIN MENU RESPONSIVE (MOBILE PORTRAIT & LANDSCAPE)
+   ========================================================== */
+
+/* 1. Mobile Portrait & Compact Tablets (Width <= 860px, Portrait) */
+@media (max-width: 860px), (orientation: portrait) and (max-width: 900px) {
+  .main-menu-screen {
+    padding: 1.5rem 1rem;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    justify-content: flex-start;
+  }
+
+  .main-menu-card {
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: none !important;
+    width: 100% !important;
+    max-width: 440px !important;
+    max-height: none !important;
+    margin: auto 0 !important;
+    padding: 1.75rem 1.35rem 1.4rem !important;
+    gap: 1.25rem !important;
+    border-radius: 24px !important;
+    border-width: 3.5px !important;
+    box-shadow: 0 8px 0 var(--color-marker) !important;
+  }
+
+  .main-menu-card::before {
+    left: 24px;
+    width: 65px;
+    height: 20px;
+    top: -10px;
+  }
+
+  .main-menu-card::after {
+    right: 24px;
+    width: 65px;
+    height: 20px;
+    top: -10px;
+  }
+
+  .menu-hero {
+    width: 100%;
+  }
+
+  .menu-logo-img {
+    width: clamp(100px, 28vw, 140px);
+    margin-bottom: 0.4rem;
+  }
+
+  .menu-title {
+    font-size: clamp(1.45rem, 5.5vw, 1.95rem);
+    margin-bottom: 0.2rem;
+  }
+
+  .menu-tagline {
+    font-size: 0.85rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .menu-progress-badge {
+    padding: 0.35rem 0.85rem;
+    font-size: 0.84rem;
+    border-radius: 12px;
+  }
+
+  .menu-button-list {
+    width: 100%;
+    gap: 0.65rem;
+  }
+
+  .btn-menu-play {
+    padding: 0.75rem 1rem;
+    min-height: 52px;
+    border-radius: 16px;
+  }
+
+  .btn-menu-play .play-icon {
+    font-size: 1.6rem;
+  }
+
+  .btn-menu-play .btn-menu-title {
+    font-size: 1.25rem;
+  }
+
+  .btn-menu-play .btn-menu-subtitle {
+    font-size: 0.78rem;
+  }
+
+  .menu-button-grid-row {
+    gap: 0.6rem;
+  }
+
+  .btn-menu-album,
+  .btn-menu-settings {
+    padding: 0.65rem 0.75rem;
+    min-height: 48px;
+    font-size: 0.95rem;
+    border-radius: 14px;
+  }
+
+  .btn-menu-album .btn-menu-icon,
+  .btn-menu-settings .btn-menu-icon {
+    font-size: 1.25rem;
+  }
+
+  .btn-menu-album .btn-menu-title,
+  .btn-menu-settings .btn-menu-title {
+    font-size: 0.95rem;
+  }
+
+  .btn-menu-parent {
+    padding: 0.55rem 0.85rem;
+    font-size: 0.86rem;
+    min-height: 42px;
+    border-radius: 14px;
+  }
+
+  .btn-menu-parent .btn-menu-icon {
+    font-size: 1.1rem;
+  }
+
+  .btn-menu-parent .btn-menu-title {
+    font-size: 0.86rem;
+  }
+}
+
+/* 2. Narrow Mobile Portrait (Width <= 380px) */
+@media (max-width: 380px) {
+  .main-menu-card {
+    padding: 1.35rem 1rem 1.15rem !important;
+    gap: 1rem !important;
+  }
+
+  .menu-logo-img {
+    width: 90px;
+  }
+
+  .menu-title {
+    font-size: 1.35rem;
+  }
+
+  .btn-menu-play .btn-menu-title {
+    font-size: 1.1rem;
+  }
+
+  .btn-menu-album .btn-menu-title,
+  .btn-menu-settings .btn-menu-title {
+    font-size: 0.85rem;
+  }
+}
+
+/* 3. Mobile Landscape Mode (Height <= 520px and Landscape) */
+@media (max-height: 520px) and (orientation: landscape) {
+  .main-menu-screen {
+    padding: 0.4rem 0.75rem !important;
+    overflow-y: auto !important;
+    justify-content: center !important;
+  }
+
+  .main-menu-card {
+    display: grid !important;
+    grid-template-columns: 1fr 1.2fr !important;
+    padding: 0.75rem 1.25rem !important;
+    gap: 1.25rem !important;
+    max-height: 96dvh !important;
+    max-width: 680px !important;
+    border-radius: 20px !important;
+    box-shadow: 0 6px 0 var(--color-marker) !important;
+  }
+
+  .main-menu-card::before,
+  .main-menu-card::after {
+    display: none;
+  }
+
+  .menu-hero {
+    width: 100%;
+  }
+
+  .menu-logo-img {
+    width: 75px !important;
+    margin-bottom: 0.15rem !important;
+  }
+
+  .menu-title {
+    font-size: 1.25rem !important;
+    margin-bottom: 0.1rem !important;
+  }
+
+  .menu-tagline {
+    font-size: 0.72rem !important;
+    margin-bottom: 0.35rem !important;
+  }
+
+  .menu-progress-badge {
+    padding: 0.2rem 0.6rem !important;
+    font-size: 0.75rem !important;
+    border-radius: 10px !important;
+  }
+
+  .menu-button-list {
+    gap: 0.35rem !important;
+  }
+
+  .btn-menu-play {
+    padding: 0.45rem 0.75rem !important;
+    min-height: 40px !important;
+    border-radius: 12px !important;
+  }
+
+  .btn-menu-play .play-icon {
+    font-size: 1.2rem !important;
+  }
+
+  .btn-menu-play .btn-menu-title {
+    font-size: 1.05rem !important;
+  }
+
+  .btn-menu-play .btn-menu-subtitle {
+    font-size: 0.7rem !important;
+  }
+
+  .menu-button-grid-row {
+    gap: 0.35rem !important;
+  }
+
+  .btn-menu-album,
+  .btn-menu-settings {
+    padding: 0.4rem 0.6rem !important;
+    min-height: 36px !important;
+    border-radius: 10px !important;
+  }
+
+  .btn-menu-album .btn-menu-icon,
+  .btn-menu-settings .btn-menu-icon {
+    font-size: 1rem !important;
+  }
+
+  .btn-menu-album .btn-menu-title,
+  .btn-menu-settings .btn-menu-title {
+    font-size: 0.82rem !important;
+  }
+
+  .btn-menu-parent {
+    padding: 0.35rem 0.65rem !important;
+    min-height: 32px !important;
+    border-radius: 10px !important;
+    font-size: 0.78rem !important;
+  }
+
+  .btn-menu-parent .btn-menu-icon {
+    font-size: 0.95rem !important;
+  }
+
+  .btn-menu-parent .btn-menu-title {
+    font-size: 0.78rem !important;
+  }
+}
+
+/* ==========================================================
    SETTINGS MODAL
    ========================================================== */
 
